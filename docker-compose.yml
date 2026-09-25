@@ -1,0 +1,55 @@
+# Ambiente de produção: PostgreSQL + backend (Java) + frontend (nginx).
+# Uso: copie .env.example para .env, preencha os valores e rode `docker compose up -d --build`.
+# O site fica em http://localhost:8081 (ou na porta definida em WEB_PORT).
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lure
+      POSTGRES_USER: lure
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lure -d lure"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://db:5432/lure
+      DB_USERNAME: lure
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@lure.com.br}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?defina ADMIN_PASSWORD no .env}
+      APP_FRONTEND_URL: ${APP_FRONTEND_URL:-http://localhost:8081}
+      CORS_ALLOWED_ORIGINS: ${APP_FRONTEND_URL:-http://localhost:8081}
+      STORAGE_DIR: /data/uploads
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+    volumes:
+      - uploads:/data/uploads
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${WEB_PORT:-8081}:80"
+
+volumes:
+  db-data:
+  uploads:

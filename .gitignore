@@ -1,0 +1,14 @@
+# Java e Node portáteis baixados pelo iniciar.cmd
+.tools/
+# Logs dos servidores iniciados pelo iniciar.cmd
+logs/
+# Segredos locais do docker compose
+.env
+# Senha do banco na nuvem (Supabase) usada pelo iniciar.cmd
+supabase.env
+# Arquivos soltos de trabalho (vídeo > 100 MB não cabe no GitHub)
+*.mp4
+/ChatGPT Image*.png
+/image.png
+/capa-boas-vindas-lure.jpg
+/LURE_Growth___*.html

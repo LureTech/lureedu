@@ -1,0 +1,14 @@
+{
+  "/api": {
+    "target": "http://localhost:8085",
+    "secure": false,
+    "changeOrigin": false,
+    "logLevel": "warn"
+  },
+  "/files": {
+    "target": "http://localhost:8085",
+    "secure": false,
+    "changeOrigin": false,
+    "logLevel": "warn"
+  }
+}
