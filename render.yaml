@@ -1,15 +1,34 @@
-# Backend (Spring Boot) no Render — o frontend fica na Vercel (vercel.json) e chama /api por rewrite.
+# AssessoriaLure no Render: frontend Angular (site estático) + backend Spring Boot (Docker).
+# O site encaminha /api e /files para o backend, então o navegador fala com um único endereço.
 # Os valores com sync: false são pedidos no painel ao criar o Blueprint (ficam fora do Git):
 # copie DB_URL, DB_USERNAME e DB_PASSWORD do supabase.env.
 services:
+  - type: web
+    name: lureedu
+    runtime: static
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: ./frontend/dist/frontend/browser
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://lureedu-api.onrender.com/api/*
+      - type: rewrite
+        source: /files/*
+        destination: https://lureedu-api.onrender.com/files/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
   - type: web
     name: lureedu-api
     runtime: docker
     plan: free
     region: virginia
-    rootDir: backend
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     envVars:
       - key: DB_URL
         sync: false
@@ -29,11 +48,11 @@ services:
       - key: DB_POOL_MIN_IDLE
         value: "1"
       - key: APP_FRONTEND_URL
-        value: https://lureedu.vercel.app
+        value: https://lureedu.onrender.com
       - key: CORS_ALLOWED_ORIGINS
-        value: https://lureedu.vercel.app
+        value: https://lureedu.onrender.com
       - key: WEBAUTHN_RP_ID
-        value: lureedu.vercel.app
-      # O plano free tem 512 MB de RAM.
+        value: lureedu.onrender.com
+      # O plano free tem 512 MB de RAM: heap pequeno e JIT enxuto para não estourar o limite.
       - key: JAVA_TOOL_OPTIONS
-        value: -XX:MaxRAMPercentage=70 -XX:+UseSerialGC -Xss512k
+        value: -Xmx256m -XX:MaxMetaspaceSize=160m -XX:ReservedCodeCacheSize=64m -XX:+UseSerialGC -Xss512k -XX:TieredStopAtLevel=1
