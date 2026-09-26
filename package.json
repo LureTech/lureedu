@@ -1,0 +1,26 @@
+{
+  "name": "lureedu",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:api": "tsx watch server/dev.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@simplewebauthn/server": "^14.0.3",
+    "bcryptjs": "^3.0.3",
+    "hono": "^4.13.9",
+    "nodemailer": "^10.0.10",
+    "postgres": "^3.4.9"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^2.1.1",
+    "@types/node": "^26.6.3",
+    "@types/nodemailer": "^8.0.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

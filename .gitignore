@@ -12,3 +12,8 @@ supabase.env
 /image.png
 /capa-boas-vindas-lure.jpg
 /LURE_Growth___*.html
+
+# Dependências da API (raiz)
+node_modules/
+
+.vercel

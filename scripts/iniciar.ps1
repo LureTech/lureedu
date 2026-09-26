@@ -1,7 +1,7 @@
 # Sobe o AssessoriaLure:
-#   backend (Java / Spring Boot) em http://localhost:8085
+#   API (TypeScript, a mesma da Vercel) em http://localhost:8085
 #   frontend (Angular)           em http://localhost:4200
-# Usa Java 21 e Node 24.15+ do sistema; se nao houver, baixa versoes portateis em .tools (nada e instalado no Windows).
+# Usa o Node 24.15+ do sistema; se nao houver, baixa uma versao portatil em .tools (nada e instalado no Windows).
 #
 # Por padrao o site sobe otimizado (modo producao): demora ~20s a mais para iniciar, mas abre e
 # troca de tela muito mais rapido no navegador. Use -Dev para o modo de desenvolvimento, que
@@ -14,7 +14,6 @@ $ProgressPreference = 'SilentlyContinue'
 
 $root = Split-Path -Parent $PSScriptRoot
 $tools = Join-Path $root '.tools'
-$backend = Join-Path $root 'backend'
 $frontend = Join-Path $root 'frontend'
 $logs = Join-Path $root 'logs'
 New-Item -ItemType Directory -Force $tools, $logs | Out-Null
@@ -23,14 +22,6 @@ function Write-Step($msg) { Write-Host "==> $msg" -ForegroundColor Yellow }
 
 function Test-Port($port) {
     return [bool](Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue)
-}
-
-function Get-JavaMajor($javaExe) {
-    try {
-        $out = & cmd /c "`"$javaExe`" -version 2>&1"
-        if ("$out" -match 'version "(\d+)') { return [int]$Matches[1] }
-    } catch {}
-    return 0
 }
 
 function Get-NodeVersion($nodeExe) {
@@ -49,20 +40,6 @@ function Expand-Download($url, $zipName, $targetName) {
     Remove-Item -Recurse -Force $tmp, $zip
 }
 
-# ---------- Java 21 ----------
-$java = Join-Path $tools 'jdk\bin\java.exe'
-if (-not (Test-Path $java)) {
-    $sysJava = (Get-Command java -ErrorAction SilentlyContinue).Source
-    if ($sysJava -and (Get-JavaMajor $sysJava) -ge 21) {
-        $java = $sysJava
-    } else {
-        Expand-Download 'https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jdk/hotspot/normal/eclipse' 'jdk21.zip' 'jdk'
-        $java = Join-Path $tools 'jdk\bin\java.exe'
-    }
-}
-$env:JAVA_HOME = Split-Path -Parent (Split-Path -Parent $java)
-Write-Step "Java: $java"
-
 # ---------- Node 24.15+ ----------
 $node = Join-Path $tools 'node\node.exe'
 if (-not (Test-Path $node)) {
@@ -75,44 +52,33 @@ if (-not (Test-Path $node)) {
     }
 }
 $nodeDir = Split-Path -Parent $node
-$env:PATH = "$nodeDir;$(Join-Path $env:JAVA_HOME 'bin');$env:PATH"
+$env:PATH = "$nodeDir;$env:PATH"
 Write-Step "Node: $node ($(& $node --version))"
 
-# ---------- Banco: Supabase (se houver supabase.env com a senha) ou H2 local ----------
+# ---------- Banco: Supabase (supabase.env com a senha) ----------
+# A API (server/dev.ts) le o supabase.env sozinha; aqui so conferimos que ele existe.
 $dbEnv = Join-Path $root 'supabase.env'
-if (Test-Path $dbEnv) {
-    $vars = @{}
-    foreach ($line in Get-Content $dbEnv -Encoding UTF8) {
-        $t = $line.Trim()
-        if (-not $t -or $t.StartsWith('#') -or -not $t.Contains('=')) { continue }
-        $i = $t.IndexOf('=')
-        $vars[$t.Substring(0, $i).Trim()] = $t.Substring($i + 1).Trim()
-    }
-    if (-not $vars['DB_PASSWORD'] -or $vars['DB_PASSWORD'] -eq 'COLE_A_SENHA_DO_BANCO_AQUI') {
-        Write-Host 'supabase.env sem a senha do banco (DB_PASSWORD): usando o banco local.' -ForegroundColor Red
-    } else {
-        foreach ($k in $vars.Keys) { Set-Item -Path "Env:$k" -Value $vars[$k] }
-        Write-Step 'Banco: Supabase (nuvem), configurado em supabase.env'
-    }
-} else {
-    Write-Step 'Banco: local (H2 em backend\data)'
+if (-not (Test-Path $dbEnv) -or -not (Select-String -Path $dbEnv -Pattern '^DB_PASSWORD=.+' -Quiet) -or
+        (Select-String -Path $dbEnv -Pattern 'COLE_A_SENHA_DO_BANCO_AQUI' -Quiet)) {
+    throw 'Falta a senha do banco em supabase.env (DB_PASSWORD). Veja Supabase -> Project Settings -> Database.'
 }
+Write-Step 'Banco: Supabase (nuvem), configurado em supabase.env'
 
-# ---------- Backend ----------
-$jar = Join-Path $backend 'target\growth.jar'
+# ---------- API (TypeScript, a mesma que roda na Vercel) ----------
 if (Test-Port 8085) {
-    Write-Step 'Backend ja esta rodando na porta 8085.'
+    Write-Step 'API ja esta rodando na porta 8085.'
 } else {
-    if (-not (Test-Path $jar)) {
-        Write-Step 'Compilando o backend (so na primeira vez, alguns minutos)...'
-        Push-Location $backend
-        & cmd /c "mvnw.cmd -q -DskipTests package"
+    if (-not (Test-Path (Join-Path $root 'node_modules\tsx'))) {
+        Write-Step 'Instalando dependencias da API (so na primeira vez)...'
+        Push-Location $root
+        & (Join-Path $nodeDir 'npm.cmd') install --no-audit --no-fund
         $code = $LASTEXITCODE
         Pop-Location
-        if ($code -ne 0) { throw 'Falha ao compilar o backend.' }
+        if ($code -ne 0) { throw 'Falha no npm install da API.' }
     }
-    Write-Step 'Iniciando backend em http://localhost:8085 (log: logs\backend.log) ...'
-    Start-Process -FilePath $java -ArgumentList '-jar', 'target\growth.jar' -WorkingDirectory $backend `
+    Write-Step 'Iniciando API em http://localhost:8085 (log: logs\backend.log) ...'
+    $env:API_PORT = '8085'
+    Start-Process -FilePath $node -ArgumentList 'node_modules\tsx\dist\cli.mjs', 'server\dev.ts' -WorkingDirectory $root `
         -WindowStyle Hidden -RedirectStandardOutput (Join-Path $logs 'backend.log') -RedirectStandardError (Join-Path $logs 'backend-erros.log')
 }
 
