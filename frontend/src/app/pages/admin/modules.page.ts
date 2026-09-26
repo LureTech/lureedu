@@ -33,7 +33,7 @@ interface Msg {
           </div>
           <h1 class="mt-3 font-display text-3xl font-bold tracking-tight md:text-4xl">Módulos</h1>
           <p class="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Organize seções e módulos. As aulas usam links do YouTube ou de arquivos .mp4 (Cloudflare R2) — no site, o vídeo toca no player da LURE.
+            Organize seções e módulos. As aulas usam links do Google Drive, do YouTube ou de arquivos .mp4.
           </p>
         </div>
         <a

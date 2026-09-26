@@ -14,7 +14,7 @@ import { IconComponent } from '../../shared/icon.component';
 import { SpinnerComponent } from '../../shared/spinner.component';
 import { SwitchComponent } from '../../shared/switch.component';
 import { prepareCover } from '../../shared/image-compress';
-import { isPlayableVideo, validateCover, validateMaterial, youtubeId, youtubeThumb } from '../../shared/youtube';
+import { driveId, isPlayableVideo, validateCover, validateMaterial, youtubeId, youtubeThumb } from '../../shared/youtube';
 import { INPUT_CLASS } from './admin-shared';
 
 interface QuizDraft {
@@ -264,12 +264,18 @@ let quizKey = 0;
                               [id]="'l-url-' + l.id"
                               [value]="lUrl()"
                               (input)="lUrl.set($any($event.target).value)"
-                              placeholder="YouTube ou https://…/aula.mp4"
+                              placeholder="Google Drive, YouTube ou https://…/aula.mp4"
                               [class]="inputClass + ' pl-10 ' + (lUrlValid() ? '' : 'border-red-500/50')"
                             />
                           </div>
                           @if (!lUrlValid()) {
-                            <p class="mt-1 text-xs text-red-400">Link inválido. Cole um link do YouTube ou um link direto terminando em .mp4 (começando com https://).</p>
+                            <p class="mt-1 text-xs text-red-400">Link inválido. Cole o link de um vídeo do Google Drive (não de pasta), do YouTube ou um link direto terminando em .mp4.</p>
+                          } @else if (lDriveId()) {
+                            <p class="mt-1 text-[11px] text-emerald-400">
+                              <app-icon name="circle-check" class="inline h-3 w-3" /> Vídeo do Google Drive. Deixe o arquivo como
+                              <b>“Qualquer pessoa com o link”</b>. O Drive não avisa quando a aula termina: o aluno marca como concluída.
+                              Preencha a duração ao lado.
+                            </p>
                           } @else if (lVideoId(); as vid) {
                             <div class="mt-2 flex items-center gap-3">
                               <img [src]="thumb(vid)" alt="Miniatura do vídeo" loading="lazy" class="h-16 w-28 rounded-lg border border-border object-cover" />
@@ -278,7 +284,7 @@ let quizKey = 0;
                           } @else if (lUrl().trim()) {
                             <p class="mt-1 inline-flex items-center gap-1 text-[11px] text-emerald-400"><app-icon name="circle-check" class="h-3 w-3" /> Arquivo de vídeo direto — toca no player da LURE.</p>
                           } @else {
-                            <p class="mt-1 text-[11px] text-muted-foreground">Cole o link público do .mp4 (Cloudflare R2) ou um link do YouTube <b>Não listado</b>. Sem link, o aluno vê “Vídeo em breve”.</p>
+                            <p class="mt-1 text-[11px] text-muted-foreground">Cole o link de compartilhamento do Google Drive, um link do YouTube <b>Não listado</b> ou o link público de um .mp4. Sem link, o aluno vê “Vídeo em breve”.</p>
                           }
                         </div>
                         <div class="grid gap-4 sm:grid-cols-[1fr_140px]">
@@ -573,6 +579,7 @@ export class ModuleEditorPage {
   protected readonly lessonSaving = signal(false);
   protected readonly orderBusy = signal(false);
   protected readonly lVideoId = computed(() => youtubeId(this.lUrl()));
+  protected readonly lDriveId = computed(() => driveId(this.lUrl()));
   protected readonly lUrlValid = computed(() => !this.lUrl().trim() || isPlayableVideo(this.lUrl()));
   protected readonly lDurValid = computed(() => {
     const d = parseDuration(this.lDur());

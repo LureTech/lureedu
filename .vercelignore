@@ -1,0 +1,15 @@
+# Nunca enviar segredos nem arquivos locais pesados num "vercel deploy" feito do computador.
+supabase.env
+.env
+.env.*
+.tools
+logs
+backend
+node_modules
+frontend/node_modules
+frontend/dist
+frontend/.angular
+/*.mp4
+/*.png
+/*.jpg
+/*.html

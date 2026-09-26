@@ -1,4 +1,4 @@
-/** Parsing de links de vídeo (YouTube ou arquivo direto) + validadores de upload (portados do original). */
+/** Parsing de links de vídeo (YouTube, Google Drive ou arquivo direto) + validadores de upload (portados do original). */
 
 const PATTERNS = [
   /youtu\.be\/([a-zA-Z0-9_-]{11})/,
@@ -33,9 +33,24 @@ export function isDirectVideo(url: string | null | undefined): boolean {
   return t.length <= 1000 && DIRECT.test(t);
 }
 
-/** Link aceito pelo player: YouTube ou arquivo direto. */
+const DRIVE_PATTERNS = [
+  /^(?:https?:\/\/)?(?:drive|docs)\.google\.com\/(?:a\/[^/]+\/)?file\/d\/([A-Za-z0-9_-]{20,})(?:[/?#].*)?$/,
+  /^(?:https?:\/\/)?drive\.google\.com\/(?:open|uc)\?(?:.*&)?id=([A-Za-z0-9_-]{20,})(?:[&#].*)?$/,
+];
+
+/** ID do arquivo no Google Drive (drive.google.com/file/d/{id}/…, open?id=…, uc?id=…) ou null. Mesma regra do backend. */
+export function driveId(url: string | null | undefined): string | null {
+  const t = (url ?? '').trim();
+  for (const re of DRIVE_PATTERNS) {
+    const m = t.match(re);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+/** Link aceito pelo player: YouTube, Google Drive ou arquivo direto. */
 export function isPlayableVideo(url: string | null | undefined): boolean {
-  return !!youtubeId(url) || isDirectVideo(url);
+  return !!youtubeId(url) || !!driveId(url) || isDirectVideo(url);
 }
 
 export const MB = 1024 * 1024;

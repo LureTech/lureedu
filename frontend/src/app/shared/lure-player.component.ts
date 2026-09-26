@@ -12,9 +12,10 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { formatClock } from './format';
 import { IconComponent } from './icon.component';
-import { isDirectVideo, youtubeId } from './youtube';
+import { driveId, isDirectVideo, youtubeId } from './youtube';
 import { YTEvent, YTPlayer, loadYouTubeApi } from './youtube-api';
 
 
@@ -52,7 +53,8 @@ function html5Player(v: HTMLVideoElement): YTPlayer {
  * - YouTube: IFrame API (host youtube-nocookie, controls:0). Nada da interface do YouTube chega ao aluno:
  *   o iframe fica sem ponteiro e recortado (.yt-crop), a capa cobre pausa/fim, a LURE desenha o próprio
  *   carregamento e, se o YouTube falhar, mostra o próprio erro — nunca o player padrão do YouTube;
- * - arquivo direto (https://…/aula.mp4, ex.: Cloudflare R2): elemento <video> nativo.
+ * - arquivo direto (https://…/aula.mp4, ex.: Cloudflare R2): elemento <video> nativo;
+ * - Google Drive: iframe do próprio Drive (não expõe tempo nem fim do vídeo).
  */
 @Component({
   selector: 'app-lure-player',
@@ -60,7 +62,16 @@ function html5Player(v: HTMLVideoElement): YTPlayer {
   imports: [IconComponent],
   host: { class: 'block' },
   template: `
-    @if (!videoId() && !directSrc()) {
+    @if (driveSrc(); as src) {
+      <!-- Google Drive não tem API de controle: usa o player dele (sem progresso automático; o aluno marca a aula como concluída). -->
+      <iframe
+        [src]="src"
+        class="h-full w-full border-0 bg-black"
+        allow="autoplay; fullscreen"
+        allowfullscreen
+        title="Vídeo da aula"
+      ></iframe>
+    } @else if (!videoId() && !directSrc()) {
       <div class="grid h-full w-full place-items-center bg-black text-sm text-white/60">Vídeo indisponível.</div>
     } @else if (failed()) {
       <div class="flex h-full w-full flex-col items-center justify-center gap-4 bg-black px-6 text-center">
@@ -249,6 +260,14 @@ export class LurePlayerComponent {
 
   protected readonly videoId = computed(() => youtubeId(this.videoUrl()));
   protected readonly directSrc = computed(() => (isDirectVideo(this.videoUrl()) ? this.videoUrl().trim() : null));
+  private readonly sanitizer = inject(DomSanitizer);
+  /** Player do Google Drive (iframe /preview); o ID só tem [A-Za-z0-9_-], então a URL é segura. */
+  protected readonly driveSrc = computed((): SafeResourceUrl | null => {
+    const id = driveId(this.videoUrl());
+    return id
+      ? this.sanitizer.bypassSecurityTrustResourceUrl(`https://drive.google.com/file/d/${id}/preview`)
+      : null;
+  });
   /** Vídeo que não carregou (YouTube fora do ar/bloqueado, vídeo removido ou privado, link quebrado). */
   protected readonly failed = signal(false);
   protected readonly buffering = signal(false);
