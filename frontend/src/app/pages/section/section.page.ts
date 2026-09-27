@@ -50,11 +50,14 @@ import { ModuleCardComponent } from '../../shared/module-card.component';
         <header class="mt-6">
           <div class="flex items-center gap-2">
             <span class="h-3 w-[3px] shrink-0 rounded-full bg-[var(--nav)]" aria-hidden="true"></span>
-            <span class="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-[var(--nav)]">{{ d.section.title }}</span>
+            <span class="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-[var(--nav)]">Trilha LURE</span>
           </div>
-          <h1 class="mt-2 font-display text-3xl font-bold tracking-tight md:text-4xl">{{ d.section.subtitle || d.section.title }}</h1>
-          <p class="mt-2 text-sm text-muted-foreground">
-            {{ d.modules.length }} {{ d.modules.length === 1 ? 'módulo' : 'módulos' }}
+          <h1 class="mt-2 font-display text-3xl font-bold uppercase tracking-tight md:text-4xl">{{ d.section.title }}</h1>
+          @if (d.section.subtitle) {
+            <p class="mt-2 max-w-2xl text-sm text-muted-foreground md:text-base">{{ d.section.subtitle }}</p>
+          }
+          <p class="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">
+            {{ d.modules.length }} {{ d.modules.length === 1 ? 'módulo' : 'módulos' }} · escolha um para ver as aulas
           </p>
         </header>
 

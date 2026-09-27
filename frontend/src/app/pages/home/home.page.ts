@@ -10,12 +10,9 @@ import {
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { CatalogStore } from '../../core/catalog.store';
-import { ModuleCardDto } from '../../core/models';
-import { ModuleLockService } from '../../core/module-lock.service';
 import { ProgressStore } from '../../core/progress.store';
 import { formatClock } from '../../shared/format';
 import { IconComponent } from '../../shared/icon.component';
-import { SectionRowComponent } from './section-row.component';
 
 const HERO = {
   eyebrow: 'Bem-vindo ao',
@@ -30,7 +27,7 @@ const HERO = {
 @Component({
   selector: 'app-home-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, IconComponent, SectionRowComponent],
+  imports: [RouterLink, IconComponent],
   template: `
     <!-- Hero mobile com vídeo -->
     <section class="relative overflow-hidden lg:hidden">
@@ -176,9 +173,58 @@ const HERO = {
           }
         </div>
       } @else {
-        @for (s of sections(); track s.section.id) {
-          <app-section-row [data]="s" [isAdmin]="auth.isAdmin()" (lockToggle)="toggleLock($event)" />
-        }
+        <!-- Trilhas lado a lado: cada capa leva aos módulos da trilha (/secao/:id) -->
+        <section class="mt-10 lg:mt-14" aria-labelledby="trilhas-title">
+          <div class="flex items-center gap-2">
+            <span class="h-3 w-[3px] shrink-0 rounded-full bg-primary" aria-hidden="true"></span>
+            <span class="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-primary">Escolha sua trilha</span>
+          </div>
+          <h2 id="trilhas-title" class="mt-2 font-display text-2xl font-bold tracking-tight md:text-3xl">Trilhas LURE</h2>
+          <ul class="mt-6 grid grid-cols-2 gap-3.5 md:grid-cols-3 lg:gap-5 xl:grid-cols-5">
+            @for (t of trilhas(); track t.id; let i = $index) {
+              <li class="lure-rise" [style.--d]="i * 60 + 'ms'">
+                <a
+                  [routerLink]="['/secao', t.id]"
+                  class="group relative flex aspect-[3/4] flex-col overflow-hidden rounded-2xl border border-primary/30 bg-black transition duration-200 hover:-translate-y-1 hover:border-primary/70 hover:shadow-[var(--shadow-card)]"
+                >
+                  @if (t.cover) {
+                    <img
+                      [src]="t.cover"
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      class="absolute inset-0 h-full w-full object-cover opacity-55 transition duration-700 group-hover:scale-105 group-hover:opacity-70"
+                    />
+                  }
+                  <div class="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/10"></div>
+                  <div
+                    class="absolute inset-x-0 bottom-0 h-2/3"
+                    style="background: radial-gradient(ellipse 80% 70% at 50% 100%, rgba(187, 154, 53, 0.22), transparent 70%)"
+                  ></div>
+                  <div class="relative flex items-center justify-between p-4">
+                    <span class="font-display text-3xl font-bold leading-none text-primary/90 md:text-4xl">{{ pad(i + 1) }}</span>
+                    <img src="/lure-logo-large.png" alt="" class="h-7 w-7 object-contain opacity-90" />
+                  </div>
+                  <div class="relative mt-auto p-4 pt-0">
+                    <span class="mb-3 block h-1 w-10 rounded-full bg-primary transition-all duration-300 group-hover:w-16"></span>
+                    <h3 class="font-display text-lg font-bold uppercase leading-tight tracking-tight text-white md:text-xl">{{ t.title }}</h3>
+                    <p class="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">
+                      {{ t.modules }} {{ t.modules === 1 ? 'módulo' : 'módulos' }} · {{ t.lessons }} aulas
+                    </p>
+                    @if (t.progress > 0) {
+                      <div class="mt-3 h-1 w-full overflow-hidden rounded-full bg-white/15">
+                        <div class="h-full rounded-full gradient-gold" [style.width.%]="t.progress"></div>
+                      </div>
+                    }
+                    <span class="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary opacity-80 transition group-hover:opacity-100">
+                      Ver módulos <app-icon name="arrow-right" class="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+                    </span>
+                  </div>
+                </a>
+              </li>
+            }
+          </ul>
+        </section>
       }
     </div>
   `,
@@ -187,7 +233,6 @@ export class HomePage {
   protected readonly auth = inject(AuthService);
   private readonly catalog = inject(CatalogStore);
   private readonly progress = inject(ProgressStore);
-  private readonly lock = inject(ModuleLockService);
   private readonly video = viewChild<ElementRef<HTMLVideoElement>>('video');
 
   protected readonly hero = HERO;
@@ -197,6 +242,21 @@ export class HomePage {
   /** Só na primeira carga: com catálogo em memória, a Home abre pronta e revalida por baixo. */
   protected readonly loading = computed(() => !this.catalog.loaded() && !this.catalog.error());
   protected readonly continueWatching = computed(() => this.progress.summary()?.continueWatching ?? null);
+  /** Capa de cada trilha: nome, foto do primeiro módulo com capa, totais e progresso do aluno. */
+  protected readonly trilhas = computed(() =>
+    this.sections().map((s) => {
+      const lessons = s.modules.reduce((n, m) => n + m.lessonCount, 0);
+      const done = s.modules.reduce((n, m) => n + m.completedLessons, 0);
+      return {
+        id: s.section.id,
+        title: s.section.title,
+        cover: s.modules.find((m) => m.coverUrl)?.coverUrl ?? null,
+        modules: s.modules.length,
+        lessons,
+        progress: lessons ? Math.round((done / lessons) * 100) : 0,
+      };
+    }),
+  );
 
   constructor() {
     this.catalog.load();
@@ -207,12 +267,12 @@ export class HomePage {
     this.catalog.load(true);
   }
 
-  protected toggleLock(m: ModuleCardDto): void {
-    this.lock.toggle(m.id, m.locked, (locked) => this.catalog.setLocked(m.id, locked));
-  }
-
   protected clock(s: number): string {
     return formatClock(s);
+  }
+
+  protected pad(n: number): string {
+    return String(n).padStart(2, '0');
   }
 
   /** Só baixa/toca o vídeo do hero no mobile (o bloco é lg:hidden). */
