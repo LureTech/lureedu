@@ -26,7 +26,7 @@ import { IconComponent } from '../../shared/icon.component';
 import { LurePlayerComponent } from '../../shared/lure-player.component';
 import { ProgressRingComponent } from '../../shared/progress-ring.component';
 import { SpinnerComponent } from '../../shared/spinner.component';
-import { isPlayableVideo } from '../../shared/youtube';
+import { isPlayableVideo, videoThumb } from '../../shared/youtube';
 import { CourseCommentsComponent } from './course-comments.component';
 import { CourseQuizComponent } from './course-quiz.component';
 import { LessonListComponent } from './lesson-list.component';
@@ -81,7 +81,9 @@ const QUIZ_PARAM = 'prova';
           </a>
           <div class="min-w-0 flex-1 md:hidden">
             <div class="truncate text-[13px] font-semibold leading-tight">{{ module()?.title ?? 'Carregando…' }}</div>
-            @if (current(); as l) {
+            @if (view() === 'overview') {
+              <div class="text-[11px] leading-tight text-muted-foreground">{{ lessons().length }} aulas</div>
+            } @else if (current(); as l) {
               <div class="text-[11px] leading-tight text-muted-foreground">
                 @if (view() === 'quiz') {
                   Prova final
@@ -185,6 +187,148 @@ const QUIZ_PARAM = 'prova';
         }
         @case ('ready') {
           @if (module(); as m) {
+            @if (view() === 'overview') {
+              <!-- Entrada do módulo: capa, progresso e as aulas em cards -->
+              <section class="mx-auto w-full max-w-[1500px] px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+                <div class="flex flex-col gap-6 md:flex-row md:items-center md:gap-10">
+                  <div class="relative aspect-video w-full shrink-0 overflow-hidden rounded-2xl border border-border bg-black md:w-[440px]">
+                    @if (m.coverUrl) {
+                      <img [src]="m.coverUrl" [alt]="m.title" class="h-full w-full object-cover" />
+                    } @else {
+                      <div class="grid h-full w-full place-items-center">
+                        <img src="/lure-logo-large.png" alt="" class="h-16 w-16 object-contain opacity-80" />
+                      </div>
+                    }
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
+                      <span class="h-1 w-5 rounded-full bg-primary"></span>{{ m.sectionTitle }}
+                    </div>
+                    <h1 class="mt-2 font-display text-2xl font-bold leading-tight sm:text-3xl lg:text-4xl">{{ m.title }}</h1>
+                    @if (m.author) {
+                      <p class="mt-2 text-sm text-muted-foreground">com <span class="font-semibold text-foreground">{{ m.author }}</span></p>
+                    }
+                    @if (m.description) {
+                      <p class="mt-3 max-w-2xl whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{{ m.description }}</p>
+                    }
+                    <div class="mt-5 flex flex-wrap items-center gap-4">
+                      @if (resumeLesson(); as r) {
+                        <button
+                          type="button"
+                          (click)="selectLesson(r)"
+                          class="inline-flex items-center gap-2 rounded-xl gradient-gold px-5 py-3 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)] transition hover:brightness-110"
+                        >
+                          <app-icon name="play" [filled]="true" class="h-4 w-4" />
+                          {{ completedCount() === 0 ? 'Começar' : allDone() ? 'Assistir de novo' : 'Continuar: aula ' + r.position }}
+                        </button>
+                      }
+                      <div class="flex items-center gap-3">
+                        <app-progress-ring [value]="percent()" class="h-11 w-11" />
+                        <div class="text-sm">
+                          <div class="font-semibold">{{ completedCount() }} de {{ lessons().length }} concluídas</div>
+                          <div class="text-xs text-muted-foreground">{{ totalDuration() }}</div>
+                        </div>
+                      </div>
+                    </div>
+                    @if (m.certificate) {
+                      <div class="max-w-sm"><ng-container [ngTemplateOutlet]="certBox" /></div>
+                    }
+                  </div>
+                </div>
+
+                <div class="mt-10 flex items-center justify-between gap-3">
+                  <h2 class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    <app-icon name="list-checks" class="h-3.5 w-3.5" /> Aulas do módulo
+                  </h2>
+                  <span class="text-xs tabular-nums text-muted-foreground">{{ lessons().length }} aulas</span>
+                </div>
+                <ul class="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3" aria-label="Aulas do módulo">
+                  @for (l of lessons(); track l.id) {
+                    <li>
+                      <button type="button" (click)="selectLesson(l)" class="group block w-full text-left">
+                        <div
+                          class="relative aspect-video w-full overflow-hidden rounded-2xl border bg-black transition duration-200 group-hover:-translate-y-1 group-hover:border-primary/60 group-hover:shadow-[var(--shadow-card)]"
+                          [class]="l.completed ? 'border-emerald-500/40' : 'border-border'"
+                        >
+                          @if (lessonThumb(l); as src) {
+                            <img
+                              [src]="src"
+                              alt=""
+                              loading="lazy"
+                              decoding="async"
+                              class="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                              (error)="hideThumb($event)"
+                            />
+                          } @else {
+                            <div class="grid h-full w-full place-items-center">
+                              <img src="/lure-logo-large.png" alt="" class="h-12 w-12 object-contain opacity-70" />
+                            </div>
+                          }
+                          <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent"></div>
+                          <span class="absolute left-3 top-3 rounded-md bg-black/70 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-white backdrop-blur">
+                            Aula {{ l.position }}
+                          </span>
+                          @if (l.completed) {
+                            <span class="absolute right-3 top-3 inline-flex items-center gap-1 rounded-md bg-emerald-500/90 px-2 py-0.5 text-[11px] font-bold text-white">
+                              <app-icon name="circle-check" class="h-3.5 w-3.5" /> Concluída
+                            </span>
+                          }
+                          <span class="absolute inset-0 grid place-items-center opacity-0 transition group-hover:opacity-100">
+                            <span class="grid h-14 w-14 place-items-center rounded-full bg-primary/95 shadow-[var(--shadow-glow)]">
+                              <app-icon name="play" [filled]="true" class="ml-1 h-6 w-6 text-primary-foreground" />
+                            </span>
+                          </span>
+                          @if (l.durationSeconds) {
+                            <span class="absolute bottom-3 right-3 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white">
+                              {{ duration(l) }}
+                            </span>
+                          }
+                          @if (!l.videoUrl) {
+                            <span class="absolute bottom-3 left-3 rounded-md bg-black/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/70">
+                              Em breve
+                            </span>
+                          }
+                        </div>
+                        <div class="mt-3 px-1">
+                          <div class="line-clamp-2 font-display text-base font-bold leading-snug transition group-hover:text-primary">{{ l.title }}</div>
+                          @if (l.description) {
+                            <p class="mt-1 line-clamp-2 text-xs text-muted-foreground">{{ l.description }}</p>
+                          }
+                        </div>
+                      </button>
+                    </li>
+                  }
+                  @if (hasQuiz()) {
+                    <li>
+                      <button
+                        type="button"
+                        (click)="openQuiz()"
+                        [disabled]="!quizUnlocked()"
+                        class="group flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-6 text-center transition enabled:hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <span class="grid h-12 w-12 place-items-center rounded-full bg-primary/15 text-primary">
+                          <app-icon [name]="quizUnlocked() ? 'award' : 'lock'" class="h-6 w-6" />
+                        </span>
+                        <span class="font-display text-base font-bold">Prova final — Certificado</span>
+                        <span class="text-xs text-muted-foreground">
+                          {{ quizUnlocked() ? (m.quiz.passed ? 'Aprovado' : 'Liberada: faça a prova') : 'Conclua todas as aulas para liberar' }}
+                        </span>
+                      </button>
+                    </li>
+                  }
+                </ul>
+                @if (lessons().length === 0) {
+                  <div class="mt-4 rounded-2xl border border-border bg-surface/40 px-6 py-10 text-center">
+                    <p class="text-sm font-semibold">Nenhuma aula publicada ainda</p>
+                    <p class="mt-1 text-xs text-muted-foreground">As aulas deste módulo estão chegando.</p>
+                  </div>
+                }
+              </section>
+              <div class="mx-auto w-full max-w-[1500px]">
+                <app-course-comments [slug]="m.slug" />
+              </div>
+            } @else {
             <div
               class="mx-auto grid w-full max-w-[1500px] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_360px]"
             >
@@ -247,8 +391,17 @@ const QUIZ_PARAM = 'prova';
 
                   <!-- Cabeçalho da aula -->
                   <div class="border-b border-border px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
-                    <div class="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
-                      <span class="h-1 w-5 rounded-full bg-primary"></span>{{ m.title }}
+                    <div class="flex items-center justify-between gap-3">
+                      <div class="flex min-w-0 items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
+                        <span class="h-1 w-5 shrink-0 rounded-full bg-primary"></span><span class="truncate">{{ m.title }}</span>
+                      </div>
+                      <button
+                        type="button"
+                        (click)="showOverview()"
+                        class="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
+                      >
+                        <app-icon name="layout-grid" class="h-3.5 w-3.5" /> Todas as aulas
+                      </button>
                     </div>
                     <h1 class="mt-2 font-display text-[19px] font-bold leading-snug sm:text-2xl lg:text-3xl">
                       <span class="mr-1.5 hidden text-muted-foreground sm:inline">Aula {{ l.position }}:</span>{{ l.title }}
@@ -358,7 +511,7 @@ const QUIZ_PARAM = 'prova';
                     class="mt-3"
                     [lessons]="lessons()"
                     [currentId]="currentId()"
-                    [view]="view()"
+                    [view]="view() === 'quiz' ? 'quiz' : 'lesson'"
                     [quiz]="m.quiz"
                     [quizUnlocked]="quizUnlocked()"
                     (select)="selectLesson($event)"
@@ -396,7 +549,7 @@ const QUIZ_PARAM = 'prova';
                   class="flex-1 overflow-y-auto p-2.5"
                   [lessons]="lessons()"
                   [currentId]="currentId()"
-                  [view]="view()"
+                  [view]="view() === 'quiz' ? 'quiz' : 'lesson'"
                   [quiz]="m.quiz"
                   [quizUnlocked]="quizUnlocked()"
                   (select)="selectLesson($event)"
@@ -421,6 +574,7 @@ const QUIZ_PARAM = 'prova';
                 </div>
               </aside>
             </div>
+            }
 
             <ng-template #certBox>
               <button
@@ -467,7 +621,8 @@ export class CoursePage {
   protected readonly errorMsg = signal('');
   protected readonly module = signal<ModuleDetailDto | null>(null);
   protected readonly selectedId = signal<string | null>(null);
-  protected readonly view = signal<'lesson' | 'quiz'>('lesson');
+  /** overview = entrada do módulo (aulas em cards, sem ?aula=); lesson = player; quiz = prova final. */
+  protected readonly view = signal<'overview' | 'lesson' | 'quiz'>('overview');
   protected readonly toggling = signal(false);
   protected readonly downloading = signal(false);
 
@@ -491,6 +646,16 @@ export class CoursePage {
     return n ? Math.round((this.completedCount() / n) * 100) : 0;
   });
   protected readonly allDone = computed(() => this.lessons().length > 0 && this.lessons().every((l) => l.completed));
+  /** Aula do botão "Começar/Continuar" da entrada do módulo: a primeira não concluída. */
+  protected readonly resumeLesson = computed(() => {
+    const m = this.module();
+    return m ? (this.firstIncomplete(m) ?? null) : null;
+  });
+  protected readonly totalDuration = computed(() => {
+    const ls = this.lessons();
+    if (!ls.length || ls.some((l) => !l.durationSeconds)) return `${ls.length} aulas`;
+    return `${ls.length} aulas · ${formatDuration(ls.reduce((s, l) => s + (l.durationSeconds ?? 0), 0))}`;
+  });
   protected readonly hasQuiz = computed(() => (this.module()?.quiz.questionCount ?? 0) > 0);
   /** A prova libera quando todas as aulas estão concluídas (o original travava para sempre). */
   protected readonly quizUnlocked = computed(() => this.allDone() || (!!this.module()?.quiz.unlocked && this.lessons().length === 0));
@@ -578,8 +743,15 @@ export class CoursePage {
       if (!this.selectedId()) this.selectedId.set(this.firstIncomplete(m)?.id ?? null);
       return;
     }
-    this.view.set('lesson');
     const byParam = aula ? m.lessons.find((l) => l.id === aula) : undefined;
+    if (!byParam) {
+      // Sem ?aula= (ou aula inexistente): entrada do módulo com as aulas em cards.
+      this.flush();
+      if (this.tracker) this.tracker.playing = false;
+      this.view.set('overview');
+      return;
+    }
+    this.view.set('lesson');
     const target = byParam ?? (this.selectedId() ? m.lessons.find((l) => l.id === this.selectedId()) : undefined) ?? this.firstIncomplete(m);
     if (!target) return;
     if (target.id !== this.selectedId() || !this.tracker || this.tracker.lessonId !== target.id) {
@@ -598,8 +770,14 @@ export class CoursePage {
     void this.router.navigate([], {
       queryParams: { aula: l.id },
       queryParamsHandling: 'merge',
-      replaceUrl: true,
+      // Saindo dos cards entra no histórico: o "voltar" do navegador volta para as aulas.
+      replaceUrl: this.view() !== 'overview',
     });
+  }
+
+  /** Volta para a entrada do módulo (aulas em cards). */
+  protected showOverview(): void {
+    void this.router.navigate([], { queryParams: { aula: null }, queryParamsHandling: 'merge' });
   }
 
   protected openQuiz(): void {
@@ -822,5 +1000,14 @@ export class CoursePage {
 
   protected bytes(n: number): string {
     return formatBytes(n);
+  }
+
+  protected lessonThumb(l: LessonDto): string | null {
+    return videoThumb(l.videoUrl, 640);
+  }
+
+  /** Miniatura indisponível (arquivo privado no Drive, vídeo removido): fica o fundo preto. */
+  protected hideThumb(e: Event): void {
+    (e.target as HTMLImageElement).style.visibility = 'hidden';
   }
 }
