@@ -17,3 +17,4 @@ supabase.env
 node_modules/
 
 .vercel
+.env*

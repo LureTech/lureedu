@@ -48,6 +48,14 @@ export function driveId(url: string | null | undefined): string | null {
   return null;
 }
 
+/** Miniatura (capa) do vídeo da aula: YouTube ou Google Drive; arquivo direto não tem → null. */
+export function videoThumb(url: string | null | undefined, width = 480): string | null {
+  const yt = youtubeId(url);
+  if (yt) return youtubeThumb(yt);
+  const drive = driveId(url);
+  return drive ? `https://drive.google.com/thumbnail?id=${drive}&sz=w${width}` : null;
+}
+
 /** Link aceito pelo player: YouTube, Google Drive ou arquivo direto. */
 export function isPlayableVideo(url: string | null | undefined): boolean {
   return !!youtubeId(url) || !!driveId(url) || isDirectVideo(url);

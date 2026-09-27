@@ -31,8 +31,8 @@ export const PILLARS: readonly Pillar[] = [
       "Monte um dashboard executivo com no máximo 8 KPIs de decisão."
     ],
     "recommendedSections": [
-      "intro",
-      "comercial"
+      "trilha-lideranca",
+      "trilha-processos"
     ],
     "questions": [
       {
@@ -264,7 +264,7 @@ export const PILLARS: readonly Pillar[] = [
       "Rode e-NPS trimestral com plano de ação por área."
     ],
     "recommendedSections": [
-      "rh"
+      "trilha-lideranca"
     ],
     "questions": [
       {
@@ -495,11 +495,7 @@ export const PILLARS: readonly Pillar[] = [
       "Escale tráfego pago com metas de CAC e LTV por canal.",
       "Construa autoridade com uma máquina de conteúdo semanal alinhada ao funil."
     ],
-    "recommendedSections": [
-      "marketing",
-      "trafego",
-      "conteudo"
-    ],
+    "recommendedSections": [],
     "questions": [
       {
         "id": "3.1",
@@ -730,9 +726,8 @@ export const PILLARS: readonly Pillar[] = [
       "Implemente Lead Scoring e SDR dedicado para qualificação."
     ],
     "recommendedSections": [
-      "call",
-      "social",
-      "comercial"
+      "trilha-vendas",
+      "trilha-recuperacao"
     ],
     "questions": [
       {
@@ -964,7 +959,7 @@ export const PILLARS: readonly Pillar[] = [
       "Estruture programa de indicação com recompensa clara e rastreamento."
     ],
     "recommendedSections": [
-      "comercial"
+      "trilha-fidelizacao"
     ],
     "questions": [
       {
@@ -1195,9 +1190,7 @@ export const PILLARS: readonly Pillar[] = [
       "Implante RAG sobre a base interna (FAQs, playbooks, contratos).",
       "Treine cada área em prompts específicos da sua função."
     ],
-    "recommendedSections": [
-      "ia"
-    ],
+    "recommendedSections": [],
     "questions": [
       {
         "id": "6.1",
