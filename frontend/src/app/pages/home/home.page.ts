@@ -185,7 +185,7 @@ const HERO = {
               <li class="lure-rise" [style.--d]="i * 60 + 'ms'">
                 <a
                   [routerLink]="['/secao', t.id]"
-                  class="group relative flex aspect-[4/5] flex-col sm:aspect-[2/3] xl:min-h-[520px] overflow-hidden rounded-2xl border border-primary/30 bg-black transition duration-200 hover:-translate-y-1 hover:border-primary/70 hover:shadow-[var(--shadow-card)]"
+                  class="group relative flex aspect-[4/5] flex-col sm:aspect-[2/3] xl:aspect-auto xl:h-[520px] overflow-hidden rounded-2xl border border-primary/30 bg-black transition duration-200 hover:-translate-y-1 hover:border-primary/70 hover:shadow-[var(--shadow-card)]"
                 >
                   @if (t.cover) {
                     <img
