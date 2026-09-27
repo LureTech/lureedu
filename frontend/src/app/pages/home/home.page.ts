@@ -179,13 +179,13 @@ const HERO = {
             <span class="h-3 w-[3px] shrink-0 rounded-full bg-primary" aria-hidden="true"></span>
             <span class="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-primary">Escolha sua trilha</span>
           </div>
-          <h2 id="trilhas-title" class="mt-2 font-display text-2xl font-bold tracking-tight md:text-3xl">Trilhas LURE</h2>
-          <ul class="mt-6 grid grid-cols-2 gap-3.5 md:grid-cols-3 lg:gap-5 xl:grid-cols-5">
+          <h2 id="trilhas-title" class="mt-2 font-display text-3xl font-bold tracking-tight md:text-4xl">Trilhas LURE</h2>
+          <ul class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-5">
             @for (t of trilhas(); track t.id; let i = $index) {
               <li class="lure-rise" [style.--d]="i * 60 + 'ms'">
                 <a
                   [routerLink]="['/secao', t.id]"
-                  class="group relative flex aspect-[3/4] flex-col overflow-hidden rounded-2xl border border-primary/30 bg-black transition duration-200 hover:-translate-y-1 hover:border-primary/70 hover:shadow-[var(--shadow-card)]"
+                  class="group relative flex aspect-[4/5] flex-col sm:aspect-[2/3] xl:min-h-[520px] overflow-hidden rounded-2xl border border-primary/30 bg-black transition duration-200 hover:-translate-y-1 hover:border-primary/70 hover:shadow-[var(--shadow-card)]"
                 >
                   @if (t.cover) {
                     <img
@@ -201,23 +201,23 @@ const HERO = {
                     class="absolute inset-x-0 bottom-0 h-2/3"
                     style="background: radial-gradient(ellipse 80% 70% at 50% 100%, rgba(187, 154, 53, 0.22), transparent 70%)"
                   ></div>
-                  <div class="relative flex items-center justify-between p-4">
-                    <span class="font-display text-3xl font-bold leading-none text-primary/90 md:text-4xl">{{ pad(i + 1) }}</span>
-                    <img src="/lure-logo-large.png" alt="" class="h-7 w-7 object-contain opacity-90" />
+                  <div class="relative flex items-center justify-between p-5 md:p-6">
+                    <span class="font-display text-5xl font-bold leading-none text-primary/90 md:text-6xl">{{ pad(i + 1) }}</span>
+                    <img src="/lure-logo-large.png" alt="" class="h-9 w-9 object-contain opacity-90" />
                   </div>
-                  <div class="relative mt-auto p-4 pt-0">
-                    <span class="mb-3 block h-1 w-10 rounded-full bg-primary transition-all duration-300 group-hover:w-16"></span>
-                    <h3 class="font-display text-lg font-bold uppercase leading-tight tracking-tight text-white md:text-xl">{{ t.title }}</h3>
-                    <p class="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">
+                  <div class="relative mt-auto p-5 pt-0 md:p-6 md:pt-0">
+                    <span class="mb-4 block h-1.5 w-12 rounded-full bg-primary transition-all duration-300 group-hover:w-20"></span>
+                    <h3 class="font-display text-2xl font-bold uppercase leading-[1.1] tracking-tight text-white md:text-[26px]">{{ t.title }}</h3>
+                    <p class="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-white/65 md:text-[13px]">
                       {{ t.modules }} {{ t.modules === 1 ? 'módulo' : 'módulos' }} · {{ t.lessons }} aulas
                     </p>
                     @if (t.progress > 0) {
-                      <div class="mt-3 h-1 w-full overflow-hidden rounded-full bg-white/15">
+                      <div class="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-white/15">
                         <div class="h-full rounded-full gradient-gold" [style.width.%]="t.progress"></div>
                       </div>
                     }
-                    <span class="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary opacity-80 transition group-hover:opacity-100">
-                      Ver módulos <app-icon name="arrow-right" class="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+                    <span class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary opacity-80 transition group-hover:opacity-100">
+                      Ver módulos <app-icon name="arrow-right" class="h-4 w-4 transition group-hover:translate-x-0.5" />
                     </span>
                   </div>
                 </a>
