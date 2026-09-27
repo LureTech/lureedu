@@ -15,6 +15,11 @@ if (existsSync('supabase.env')) {
 }
 process.env.JWT_SECRET ??= 'lure-growth-dev-only-secret-change-me-0123456789abcdefghijklmnopqrstuvwxyz';
 
+// Uma queda de rede até o banco (ECONNRESET) às vezes escapa como promessa sem tratamento;
+// sem isto o processo inteiro morre e o site local fica sem API até alguém religar.
+process.on('unhandledRejection', (err) => console.error('Erro sem tratamento (API continua no ar):', err));
+process.on('uncaughtException', (err) => console.error('Exceção sem tratamento (API continua no ar):', err));
+
 const { createHandler } = await import('./app.js');
 const port = Number(process.env.API_PORT ?? 8085);
 serve({ fetch: createHandler(), port }, () => console.log(`API em http://localhost:${port}`));
