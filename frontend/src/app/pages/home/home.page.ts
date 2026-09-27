@@ -180,12 +180,12 @@ const HERO = {
             <span class="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-primary">Escolha sua trilha</span>
           </div>
           <h2 id="trilhas-title" class="mt-2 font-display text-3xl font-bold tracking-tight md:text-4xl">Trilhas LURE</h2>
-          <ul class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-5">
+          <ul class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:relative xl:left-1/2 xl:w-[min(1760px,calc(100vw-5rem))] xl:-translate-x-1/2 xl:grid-cols-5">
             @for (t of trilhas(); track t.id; let i = $index) {
               <li class="lure-rise" [style.--d]="i * 60 + 'ms'">
                 <a
                   [routerLink]="['/secao', t.id]"
-                  class="group relative flex aspect-[4/5] flex-col sm:aspect-[2/3] xl:aspect-auto xl:h-[520px] overflow-hidden rounded-2xl border border-primary/30 bg-black transition duration-200 hover:-translate-y-1 hover:border-primary/70 hover:shadow-[var(--shadow-card)]"
+                  class="group relative flex aspect-[4/5] flex-col sm:aspect-[2/3] xl:aspect-auto xl:h-[560px] overflow-hidden rounded-2xl border border-primary/30 bg-black transition duration-200 hover:-translate-y-1 hover:border-primary/70 hover:shadow-[var(--shadow-card)]"
                 >
                   @if (t.cover) {
                     <img
