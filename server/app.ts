@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { authentication } from './lib/auth.js';
+import { connectionError } from './lib/db.js';
 import { ApiException, errorBody, Messages } from './lib/errors.js';
 import type { AppEnv } from './lib/http.js';
 import { registerAdminCatalog } from './routes/admin-catalog.js';
@@ -41,6 +42,13 @@ export function createApp() {
     if (err instanceof ApiException) {
       return c.json(err.body(), err.status as 400);
     }
+    const lost = connectionError(err);
+    if (lost) {
+      // A conexão com o banco caiu: createHandler repete a requisição uma vez quando é seguro.
+      console.warn('Conexão com o banco falhou:', (err as Error).message);
+      c.header(RETRY_HEADER, lost.safe ? 'safe' : 'unsafe');
+      return c.json(errorBody(503, 'Instabilidade na conexão. Tente novamente.'), 503);
+    }
     const code = (err as { code?: string }).code;
     // Violação de UNIQUE / FK: conflito com dados existentes (igual ao DataIntegrityViolation do Java).
     if (code === '23505' || code === '23503') {
@@ -52,4 +60,27 @@ export function createApp() {
   });
 
   return app;
+}
+
+const RETRY_HEADER = 'x-lure-db-retry';
+
+/**
+ * O app com uma nova tentativa automática quando a conexão com o banco cai no meio da requisição
+ * (o pooler do Supabase derruba conexões paradas). Repete GET sempre e os demais métodos só quando
+ * a consulta com certeza não chegou ao banco — nunca grava duas vezes.
+ */
+export function createHandler(): (req: Request) => Promise<Response> {
+  const app = createApp();
+  return async (req) => {
+    const second = req.clone();
+    let res = await app.fetch(req);
+    const flag = res.headers.get(RETRY_HEADER);
+    if (flag && (flag === 'safe' || req.method === 'GET' || req.method === 'HEAD')) {
+      res = await app.fetch(second);
+    }
+    if (!res.headers.has(RETRY_HEADER)) return res;
+    const clean = new Response(res.body, res);
+    clean.headers.delete(RETRY_HEADER);
+    return clean;
+  };
 }

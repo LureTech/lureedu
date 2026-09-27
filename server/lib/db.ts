@@ -47,7 +47,9 @@ function createSql() {
     // (o pooler do Supabase em modo transação não os suporta).
     max: Number(process.env.DB_POOL_SIZE ?? 3),
     prepare: false,
-    idle_timeout: 20,
+    // O pooler derruba conexões paradas sem avisar: fecha as ociosas antes e recicla as antigas.
+    idle_timeout: 10,
+    max_lifetime: 5 * 60,
     connect_timeout: 10,
     connection: { search_path: process.env.DB_SCHEMA ?? schema ?? 'lure' },
     types: {
@@ -84,6 +86,25 @@ export function withUserLock<T>(userId: string, work: (tx: Tx) => Promise<T>): P
 
 export function transaction<T>(work: (tx: Tx) => Promise<T>): Promise<T> {
   return db().begin((tx) => work(tx as unknown as Tx)) as Promise<T>;
+}
+
+/**
+ * Falha de conexão com o banco (não de SQL). "safe" = a consulta com certeza não chegou ao banco
+ * (não conectou / não conseguiu enviar), então dá para repetir até um POST sem risco de gravar duas vezes.
+ */
+export function connectionError(err: unknown): { safe: boolean } | null {
+  const code = (err as { code?: string } | null)?.code;
+  const message = (err as { message?: string } | null)?.message ?? '';
+  if (code === 'CONNECT_TIMEOUT' || code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'EAI_AGAIN') {
+    return { safe: true };
+  }
+  if (code === 'CONNECTION_CLOSED' || code === 'CONNECTION_ENDED' || code === 'CONNECTION_DESTROYED') {
+    return { safe: message.startsWith('write ') };
+  }
+  if (code === 'ECONNRESET' || code === 'EPIPE' || code === 'ETIMEDOUT') {
+    return { safe: false };
+  }
+  return null;
 }
 
 export function newId(): string {

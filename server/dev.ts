@@ -15,6 +15,6 @@ if (existsSync('supabase.env')) {
 }
 process.env.JWT_SECRET ??= 'lure-growth-dev-only-secret-change-me-0123456789abcdefghijklmnopqrstuvwxyz';
 
-const { createApp } = await import('./app.js');
+const { createHandler } = await import('./app.js');
 const port = Number(process.env.API_PORT ?? 8085);
-serve({ fetch: createApp().fetch, port }, () => console.log(`API em http://localhost:${port}`));
+serve({ fetch: createHandler(), port }, () => console.log(`API em http://localhost:${port}`));
