@@ -101,7 +101,8 @@ export function connectionError(err: unknown): { safe: boolean } | null {
   if (code === 'CONNECTION_CLOSED' || code === 'CONNECTION_ENDED' || code === 'CONNECTION_DESTROYED') {
     return { safe: message.startsWith('write ') };
   }
-  if (code === 'ECONNRESET' || code === 'EPIPE' || code === 'ETIMEDOUT') {
+  // 57014 = consulta cancelada por tempo (acontece de vez em quando no pooler); só leituras repetem.
+  if (code === 'ECONNRESET' || code === 'EPIPE' || code === 'ETIMEDOUT' || code === '57014') {
     return { safe: false };
   }
   return null;
