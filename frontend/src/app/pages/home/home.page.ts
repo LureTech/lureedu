@@ -202,7 +202,7 @@ const HERO = {
             @for (t of trilhas(); track t.id; let i = $index) {
               <li
                 data-trilha
-                class="lure-rise w-[80%] shrink-0 snap-start sm:w-[calc(50%-0.625rem)] lg:w-[calc(33.333%-0.834rem)] xl:w-[calc(25%-0.9375rem)]"
+                class="lure-rise w-[80%] shrink-0 snap-start sm:w-[calc(50%-0.625rem)] lg:w-[calc(33.333%-0.834rem)]"
                 [style.--d]="i * 60 + 'ms'"
               >
                 <a
