@@ -180,12 +180,34 @@ const HERO = {
             <span class="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-primary">Escolha sua trilha</span>
           </div>
           <h2 id="trilhas-title" class="mt-2 font-display text-3xl font-bold tracking-tight md:text-4xl">Trilhas LURE</h2>
-          <ul class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:relative xl:left-1/2 xl:w-[min(1760px,calc(100vw-5rem))] xl:-translate-x-1/2 xl:grid-cols-5">
+          <!-- Carrossel: arrasta no celular, setas no computador -->
+          <div class="relative mt-6">
+            <button
+              type="button"
+              aria-label="Trilha anterior"
+              (click)="scrollTrilhas(-1)"
+              class="absolute -left-4 top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-border/70 bg-background/90 text-foreground shadow-lg backdrop-blur transition hover:border-primary/50 hover:text-primary md:flex"
+            >
+              <app-icon name="chevron-left" class="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              aria-label="Próxima trilha"
+              (click)="scrollTrilhas(1)"
+              class="absolute -right-4 top-1/2 z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-border/70 bg-background/90 text-foreground shadow-lg backdrop-blur transition hover:border-primary/50 hover:text-primary md:flex"
+            >
+              <app-icon name="chevron-right" class="h-5 w-5" />
+            </button>
+          <ul #trilhasTrack class="no-scrollbar flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain pb-3 pt-2">
             @for (t of trilhas(); track t.id; let i = $index) {
-              <li class="lure-rise" [style.--d]="i * 60 + 'ms'">
+              <li
+                data-trilha
+                class="lure-rise w-[80%] shrink-0 snap-start sm:w-[calc(50%-0.625rem)] lg:w-[calc(33.333%-0.834rem)] xl:w-[calc(25%-0.9375rem)]"
+                [style.--d]="i * 60 + 'ms'"
+              >
                 <a
                   [routerLink]="['/secao', t.id]"
-                  class="group relative flex aspect-[4/5] flex-col sm:aspect-[2/3] xl:aspect-auto xl:h-[560px] overflow-hidden rounded-2xl border border-primary/30 bg-black transition duration-200 hover:-translate-y-1 hover:border-primary/70 hover:shadow-[var(--shadow-card)]"
+                  class="group relative flex aspect-[3/4] flex-col overflow-hidden rounded-2xl border border-primary/30 bg-black transition duration-200 hover:-translate-y-1 hover:border-primary/70 hover:shadow-[var(--shadow-card)]"
                 >
                   @if (t.cover) {
                     <img
@@ -224,6 +246,7 @@ const HERO = {
               </li>
             }
           </ul>
+          </div>
         </section>
       }
     </div>
@@ -234,6 +257,7 @@ export class HomePage {
   private readonly catalog = inject(CatalogStore);
   private readonly progress = inject(ProgressStore);
   private readonly video = viewChild<ElementRef<HTMLVideoElement>>('video');
+  private readonly trilhasTrack = viewChild<ElementRef<HTMLElement>>('trilhasTrack');
 
   protected readonly hero = HERO;
   protected readonly skeleton = [1, 2];
@@ -269,6 +293,14 @@ export class HomePage {
 
   protected clock(s: number): string {
     return formatClock(s);
+  }
+
+  /** Setas do carrossel: anda uma capa por clique. */
+  protected scrollTrilhas(dir: number): void {
+    const el = this.trilhasTrack()?.nativeElement;
+    if (!el) return;
+    const card = el.querySelector<HTMLElement>('[data-trilha]');
+    el.scrollBy({ left: dir * (card ? card.offsetWidth + 20 : el.clientWidth * 0.8), behavior: 'smooth' });
   }
 
   protected pad(n: number): string {
