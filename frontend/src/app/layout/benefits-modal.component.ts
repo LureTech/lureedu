@@ -8,7 +8,6 @@ const BENEFITS: { icon: string; title: string; text: string }[] = [
   { icon: 'video', title: 'Mentorias ao vivo', text: 'Encontros com o time LURE para destravar os seus próximos passos.' },
   { icon: 'users', title: 'Comunidade exclusiva', text: 'Troque conquistas, dúvidas e cases com quem está no mesmo jogo.' },
   { icon: 'award', title: 'Certificados verificáveis', text: 'Cada módulo concluído gera um certificado com código de verificação.' },
-  { icon: 'target', title: 'Diagnóstico de Maturidade', text: 'Raio-x da empresa em 6 pilares com plano de ação priorizado.' },
   { icon: 'life-buoy', title: 'Suporte direto', text: 'Fale com a equipe pelo WhatsApp sempre que precisar.' },
 ];
 

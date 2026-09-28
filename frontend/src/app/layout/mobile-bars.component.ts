@@ -212,7 +212,6 @@ export class MobileDrawerComponent {
     { key: 'courses', label: 'Meus cursos', icon: 'ph-book-open-text', to: '/meus-cursos', query: { tab: 'andamento' } },
     { key: 'community', label: 'Comunidade', icon: 'ph-users-three', to: '/comunidade' },
     { key: 'certs', label: 'Certificados', icon: 'ph-certificate', to: '/meus-cursos', query: { tab: 'certificados' } },
-    { key: 'diagnostic', label: 'Diagnóstico', icon: 'target', to: '/diagnostico' },
   ];
 
   constructor() {

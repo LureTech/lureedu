@@ -19,7 +19,6 @@ export const MENU_ITEMS: NavItem[] = [
   { key: 'courses', label: 'Meus cursos', icon: 'ph-book-open-text', to: '/meus-cursos', query: { tab: 'andamento' } },
   { key: 'certs', label: 'Certificados', icon: 'ph-certificate', to: '/meus-cursos', query: { tab: 'certificados' } },
   { key: 'community', label: 'Comunidade', icon: 'ph-users-three', to: '/comunidade' },
-  { key: 'diagnostic', label: 'Diagnóstico', icon: 'target', to: '/diagnostico' },
 ];
 
 export const GENERAL_ITEMS: NavItem[] = [
@@ -69,8 +68,6 @@ export function isNavActive(key: string, s: UrlState): boolean {
       return p.startsWith('/meus-cursos') && s.tab === 'certificados';
     case 'community':
       return p.startsWith('/comunidade');
-    case 'diagnostic':
-      return p.startsWith('/diagnostico');
     case 'accounts':
       return p === '/admin';
     case 'modules':

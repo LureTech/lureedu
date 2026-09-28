@@ -51,11 +51,6 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/community/community.page').then((m) => m.CommunityPage),
       },
       {
-        path: 'diagnostico',
-        title: 'Diagnóstico de Maturidade',
-        loadComponent: () => import('./pages/diagnostic/diagnostic.page').then((m) => m.DiagnosticPage),
-      },
-      {
         path: 'admin',
         canActivate: [adminGuard],
         children: [
