@@ -1,10 +1,13 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { TimeoutError, timeout } from 'rxjs';
 import { CatalogApi } from './api/catalog.api';
 import { apiMessage } from './api-error';
 import { CatalogSectionDto } from './models';
 
 /** Tempo que o catálogo em memória é considerado atual; depois disso, revalida em segundo plano. */
 const FRESH_MS = 60_000;
+/** Sem resposta nesse tempo, desiste e mostra "Tentar de novo" (senão o esqueleto fica para sempre). */
+const TIMEOUT_MS = 20_000;
 
 /**
  * Catálogo compartilhado (Home e seções).
@@ -30,7 +33,7 @@ export class CatalogStore {
     if (!force && this.loaded() && Date.now() - this.lastLoad < FRESH_MS) return;
     this.inflight = true;
     if (!this.loaded()) this.error.set(null);
-    this.api.catalog().subscribe({
+    this.api.catalog().pipe(timeout(TIMEOUT_MS)).subscribe({
       next: (list) => {
         this.sections.set(list.filter((s) => s.modules.length > 0));
         this.loaded.set(true);
@@ -40,7 +43,11 @@ export class CatalogStore {
       },
       error: (err) => {
         // Com catálogo na tela, uma falha de revalidação é silenciosa: o aluno continua vendo os módulos.
-        if (!this.loaded()) this.error.set(apiMessage(err));
+        if (!this.loaded()) {
+          this.error.set(
+            err instanceof TimeoutError ? 'A conexão está lenta e o catálogo não carregou. Tente de novo.' : apiMessage(err),
+          );
+        }
         this.inflight = false;
       },
     });

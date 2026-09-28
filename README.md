@@ -49,7 +49,8 @@ npm run typecheck
 
 cd frontend
 npm install
-npm start              # site em http://localhost:4200 (proxy de /api e /files para a 8085)
+npm start              # site em http://localhost:4200 (proxy de /api e /files para a API da Vercel;
+                       #   LURE_API=local npm start usa a API local da 8085)
 ```
 
 Banco novo ou restaurado: rode `npx tsx scripts/setup-db.ts` uma vez (cria a tabela `stored_files`).
