@@ -43,6 +43,8 @@ interface Tracker {
 }
 
 const QUIZ_PARAM = 'prova';
+/** ?aula=todas: aulas do módulo em cards (botão "Todas as aulas"). */
+const ALL_PARAM = 'todas';
 
 /** /curso/:slug — player, aula atual, materiais, comentários, lista de aulas e prova final. */
 @Component({
@@ -605,7 +607,7 @@ const QUIZ_PARAM = 'prova';
 })
 export class CoursePage {
   readonly slug = input.required<string>();
-  /** ?aula=<lessonId> | ?aula=prova */
+  /** ?aula=<lessonId> | ?aula=prova | ?aula=todas */
   readonly aula = input<string | undefined>(undefined);
 
   protected readonly auth = inject(AuthService);
@@ -621,8 +623,8 @@ export class CoursePage {
   protected readonly errorMsg = signal('');
   protected readonly module = signal<ModuleDetailDto | null>(null);
   protected readonly selectedId = signal<string | null>(null);
-  /** overview = entrada do módulo (aulas em cards, sem ?aula=); lesson = player; quiz = prova final. */
-  protected readonly view = signal<'overview' | 'lesson' | 'quiz'>('overview');
+  /** lesson = player (padrão ao abrir o módulo); overview = aulas em cards (?aula=todas); quiz = prova final. */
+  protected readonly view = signal<'overview' | 'lesson' | 'quiz'>('lesson');
   protected readonly toggling = signal(false);
   protected readonly downloading = signal(false);
 
@@ -743,14 +745,14 @@ export class CoursePage {
       if (!this.selectedId()) this.selectedId.set(this.firstIncomplete(m)?.id ?? null);
       return;
     }
-    const byParam = aula ? m.lessons.find((l) => l.id === aula) : undefined;
-    if (!byParam) {
-      // Sem ?aula= (ou aula inexistente): entrada do módulo com as aulas em cards.
+    if (aula === ALL_PARAM) {
       this.flush();
       if (this.tracker) this.tracker.playing = false;
       this.view.set('overview');
       return;
     }
+    // Sem ?aula=: abre direto na primeira aula não concluída.
+    const byParam = aula ? m.lessons.find((l) => l.id === aula) : undefined;
     this.view.set('lesson');
     const target = byParam ?? (this.selectedId() ? m.lessons.find((l) => l.id === this.selectedId()) : undefined) ?? this.firstIncomplete(m);
     if (!target) return;
@@ -775,9 +777,9 @@ export class CoursePage {
     });
   }
 
-  /** Volta para a entrada do módulo (aulas em cards). */
+  /** Mostra todas as aulas do módulo em cards. */
   protected showOverview(): void {
-    void this.router.navigate([], { queryParams: { aula: null }, queryParamsHandling: 'merge' });
+    void this.router.navigate([], { queryParams: { aula: ALL_PARAM }, queryParamsHandling: 'merge' });
   }
 
   protected openQuiz(): void {
