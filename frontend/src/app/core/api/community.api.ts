@@ -89,6 +89,20 @@ export class CommunityApi {
     return this.http.delete<void>(`/api/community/comments/${id}`);
   }
 
+  // ---------------------------------------------------------------- moderação (admin)
+
+  pending(): Observable<PostDto[]> {
+    return this.http.get<PostDto[]>('/api/admin/community/pending');
+  }
+
+  approve(id: string): Observable<PostDto> {
+    return this.http.post<PostDto>(`/api/admin/community/posts/${id}/approve`, {});
+  }
+
+  reject(id: string): Observable<void> {
+    return this.http.post<void>(`/api/admin/community/posts/${id}/reject`, {});
+  }
+
   stats(): Observable<CommunityStatsDto> {
     return this.http.get<CommunityStatsDto>('/api/community/stats');
   }

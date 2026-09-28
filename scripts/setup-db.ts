@@ -19,8 +19,11 @@ if (existsSync('supabase.env')) {
 const { db } = await import('../server/lib/db.js');
 const sql = db();
 
-await sql.unsafe(readFileSync('server/sql/001_stored_files.sql', 'utf8'));
-console.log('Tabela stored_files pronta.');
+// Migrações da API em TypeScript (idempotentes), em ordem.
+for (const file of readdirSync('server/sql').filter((f) => f.endsWith('.sql')).sort()) {
+  await sql.unsafe(readFileSync(join('server/sql', file), 'utf8'));
+  console.log(`Migração ${file} aplicada.`);
+}
 
 const TYPES: Record<string, string> = {
   jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif',

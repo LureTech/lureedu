@@ -4,6 +4,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommunityApi, FeedQuery } from '../../core/api/community.api';
 import { apiMessage } from '../../core/api-error';
+import { AuthService } from '../../core/auth.service';
 import { ConfirmService } from '../../core/confirm.service';
 import { CATEGORIES, Category, CommentDto, CommunityStatsDto, NewPostsResponse, PostDto } from '../../core/models';
 import { ToastService } from '../../core/toast.service';
@@ -199,6 +200,38 @@ function normalizeTag(raw: string | null): string | null {
 
           <app-community-composer [remainingToday]="stats()?.remainingToday ?? null" (published)="onPublished($event)" />
 
+          <!-- Moderação: posts de membros esperando o admin aprovar -->
+          @if (isAdmin() && pending().length) {
+            <section id="pendentes" class="border-b border-amber-500/30 bg-amber-500/[0.04]" aria-labelledby="pendentes-title">
+              <h2 id="pendentes-title" class="flex items-center gap-2 px-4 pb-1 pt-3 text-sm font-bold text-amber-400 sm:px-5">
+                <app-icon name="clock" class="h-4 w-4" /> Aguardando sua aprovação ({{ pending().length }})
+              </h2>
+              @for (p of pending(); track p.id) {
+                <div>
+                  <app-community-post [post]="p" (open)="openPost($event)" (tag)="setTag($event)" (remove)="reject(p)" />
+                  <div class="-mt-px flex gap-2 border-b border-border/60 px-4 pb-3 pl-[68px] sm:px-5 sm:pl-[72px]">
+                    <button
+                      type="button"
+                      (click)="approve(p)"
+                      [disabled]="moderating() === p.id"
+                      class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-4 py-1.5 text-[13px] font-semibold text-white transition hover:bg-emerald-400 disabled:opacity-60"
+                    >
+                      <app-icon name="check" class="h-4 w-4" /> Aprovar
+                    </button>
+                    <button
+                      type="button"
+                      (click)="reject(p)"
+                      [disabled]="moderating() === p.id"
+                      class="inline-flex items-center gap-1.5 rounded-full border border-red-500/40 px-4 py-1.5 text-[13px] font-semibold text-red-400 transition hover:bg-red-500/10 disabled:opacity-60"
+                    >
+                      <app-icon name="x" class="h-4 w-4" /> Recusar
+                    </button>
+                  </div>
+                </div>
+              }
+            </section>
+          }
+
           <!-- Filtros: hashtag/busca ativas + categorias -->
           <div class="no-scrollbar flex items-center gap-2 overflow-x-auto border-b border-border/60 px-4 py-2.5 sm:px-5">
             @if (tag()) {
@@ -309,6 +342,11 @@ function normalizeTag(raw: string | null): string | null {
 export class CommunityPage {
   private readonly api = inject(CommunityApi);
   private readonly confirm = inject(ConfirmService);
+  private readonly auth = inject(AuthService);
+  protected readonly isAdmin = this.auth.isAdmin;
+  /** Posts de membros aguardando aprovação (só admin carrega). */
+  protected readonly pending = signal<PostDto[]>([]);
+  protected readonly moderating = signal<string | null>(null);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -384,8 +422,12 @@ export class CommunityPage {
     });
 
     this.loadStats();
+    this.loadPending();
     const timer = setInterval(() => {
-      if (!document.hidden) this.pollNew();
+      if (!document.hidden) {
+        this.pollNew();
+        this.loadPending();
+      }
     }, POLL_MS);
     inject(DestroyRef).onDestroy(() => {
       clearInterval(timer);
@@ -509,7 +551,11 @@ export class CommunityPage {
       (!cat || p.category === cat) &&
       (!tag || splitRichText(p.body).some((x) => x.kind === 'tag' && x.value === tag));
     if (fits) this.posts.update((list) => [p, ...list]);
-    else this.toast.success('Publicado! Seu post já está no feed.');
+    if (p.status === 'PENDING') {
+      this.toast.success('Enviado! Sua publicação aparece para todos assim que a equipe aprovar.');
+    } else if (!fits) {
+      this.toast.success('Publicado! Seu post já está no feed.');
+    }
     this.loadStats();
   }
 
@@ -598,6 +644,54 @@ export class CommunityPage {
       error: (err) => {
         this.posts.set(before);
         this.toast.error(apiMessage(err, 'Não foi possível apagar a publicação.'));
+      },
+    });
+  }
+
+  // ------------------------------------------------------------------ moderação (admin)
+
+  private loadPending(): void {
+    if (!this.isAdmin()) return;
+    this.api.pending().subscribe({ next: (list) => this.pending.set(list), error: () => undefined });
+  }
+
+  protected approve(p: PostDto): void {
+    this.moderating.set(p.id);
+    this.api.approve(p.id).subscribe({
+      next: (approved) => {
+        this.moderating.set(null);
+        this.pending.update((list) => list.filter((x) => x.id !== p.id));
+        this.posts.update((list) => [approved, ...list.filter((x) => x.id !== p.id)]);
+        this.toast.success('Publicação aprovada. Já está no feed para todos.');
+        this.loadStats();
+      },
+      error: (err) => {
+        this.moderating.set(null);
+        this.toast.error(apiMessage(err, 'Não foi possível aprovar agora.'));
+        this.loadPending();
+      },
+    });
+  }
+
+  protected async reject(p: PostDto): Promise<void> {
+    const ok = await this.confirm.ask({
+      title: 'Recusar esta publicação?',
+      message: 'Ela é apagada e o autor recebe um aviso de que não foi aprovada.',
+      confirmLabel: 'Recusar',
+      danger: true,
+    });
+    if (!ok) return;
+    this.moderating.set(p.id);
+    this.api.reject(p.id).subscribe({
+      next: () => {
+        this.moderating.set(null);
+        this.pending.update((list) => list.filter((x) => x.id !== p.id));
+        this.toast.success('Publicação recusada.');
+      },
+      error: (err) => {
+        this.moderating.set(null);
+        this.toast.error(apiMessage(err, 'Não foi possível recusar agora.'));
+        this.loadPending();
       },
     });
   }

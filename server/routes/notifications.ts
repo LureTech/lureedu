@@ -49,6 +49,29 @@ export async function notifyReply(
     VALUES (${newId()}, ${recipientId}, ${type}, ${title}, ${body}, ${link}, false, ${now()})`;
 }
 
+/** Aviso direto a uma pessoa (ex.: resultado da moderação da comunidade); não depende de preferência. */
+export async function notifyUser(
+  sql: Db,
+  recipientId: string,
+  type: NotificationType,
+  title: string,
+  body: string | null,
+  link: string | null,
+): Promise<void> {
+  await sql`
+    INSERT INTO notifications (id, user_id, type, title, body, link, is_read, created_at)
+    VALUES (${newId()}, ${recipientId}, ${type}, ${truncate(title, 200)}, ${truncate(body, 500)}, ${link}, false, ${now()})`;
+}
+
+/** Avisa todos os admins ativos (exceto quem agiu). */
+export async function notifyAdmins(sql: Db, actorId: string, title: string, body: string | null, link: string | null): Promise<void> {
+  await sql`
+    INSERT INTO notifications (id, user_id, type, title, body, link, is_read, created_at)
+    SELECT gen_random_uuid(), u.id, 'SYSTEM', ${truncate(title, 200)}, ${truncate(body, 500)}, ${link}, false, ${now()}
+    FROM users u
+    WHERE u.active = true AND u.role = 'ADMIN' AND u.id <> ${actorId}`;
+}
+
 /** Novo módulo liberado: todos os usuários ativos (exceto quem liberou) com "newContent" ligado. */
 export async function notifyNewContent(sql: Db, actorId: string, title: string, body: string | null, link: string | null): Promise<number> {
   const result = await sql`

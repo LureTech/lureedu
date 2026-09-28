@@ -275,6 +275,8 @@ export interface PostDto {
   createdAt: string;
   author: AuthorDto;
   canDelete: boolean;
+  /** PENDING = aguardando aprovação de um admin (só o autor e os admins veem). */
+  status: 'APPROVED' | 'PENDING';
   /** 2 comentários mais novos (do mais antigo pro mais novo) — prévia da conversa no feed */
   recentComments: CommentDto[];
 }

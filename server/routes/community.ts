@@ -1,5 +1,5 @@
 import { db, newId, now, transaction, withUserLock, type Db } from '../lib/db.js';
-import { badRequest, forbidden, Messages, notFound, tooManyRequests } from '../lib/errors.js';
+import { badRequest, conflict, forbidden, Messages, notFound, tooManyRequests } from '../lib/errors.js';
 import {
   Check,
   created,
@@ -18,7 +18,7 @@ import {
 import { deleteFile, fileUrl, storeImage } from '../lib/storage.js';
 import { excerpt, normalize } from '../lib/text.js';
 import { authorDto, displayName, unknownAuthor, type AuthorDto } from '../lib/users.js';
-import { notifyCommunity, notifyReply } from './notifications.js';
+import { notifyAdmins, notifyCommunity, notifyReply, notifyUser } from './notifications.js';
 
 const MAX_BODY = 500;
 const MAX_COMMENT = 300;
@@ -48,9 +48,12 @@ interface AuthorCols {
   a_avatar_path: string | null;
 }
 
+type PostStatus = 'APPROVED' | 'PENDING';
+
 interface PostRow extends AuthorCols {
   id: string;
   user_id: string;
+  status: PostStatus;
   category: string;
   body: string;
   image_path: string | null;
@@ -197,6 +200,8 @@ function postDto(p: PostRow, recentComments: ReturnType<typeof commentDto>[], us
     createdAt: p.created_at,
     author: author(p, p.user_id),
     canDelete: isAdmin(user) || p.user_id === user.id,
+    /** PENDING = aguardando aprovação de um admin (só o autor e os admins veem). */
+    status: p.status,
     recentComments,
   };
 }
@@ -204,7 +209,7 @@ function postDto(p: PostRow, recentComments: ReturnType<typeof commentDto>[], us
 /** SELECT de posts já com autor, contagens e "curti". */
 function postSelect(sql: Db, userId: string) {
   return sql`
-    SELECT p.id, p.user_id, p.category, p.body, p.image_path, p.image_width, p.image_height, p.created_at,
+    SELECT p.id, p.user_id, p.status, p.category, p.body, p.image_path, p.image_width, p.image_height, p.created_at,
            u.id AS a_id, u.email AS a_email, u.full_name AS a_full_name, u.avatar_path AS a_avatar_path,
            (SELECT count(*) FROM post_likes l WHERE l.post_id = p.id) AS likes_count,
            (SELECT count(*) FROM post_comments pc WHERE pc.post_id = p.id) AS comments_count,
@@ -215,7 +220,7 @@ function postSelect(sql: Db, userId: string) {
 function filteredQuery(sql: Db, userId: string, f: FeedFilter, before: Date | null, max: number) {
   return sql<PostRow[]>`
     ${postSelect(sql, userId)}
-    WHERE 1 = 1
+    WHERE (p.status = 'APPROVED' OR p.user_id = ${userId})
     ${f.category != null ? sql`AND p.category = ${f.category}` : sql``}
     ${f.tag != null ? sql`AND lower(p.body) LIKE ${'%#' + escapeLike(f.tag) + '%'} ESCAPE '!'` : sql``}
     ${f.query != null
@@ -298,10 +303,22 @@ async function findPost(sql: Db, userId: string, postId: string): Promise<PostRo
 }
 
 async function requirePost(sql: Db, postId: string) {
-  const rows = await sql<{ id: string; user_id: string; body: string; image_path: string | null }[]>`
-    SELECT id, user_id, body, image_path FROM community_posts WHERE id = ${postId}`;
+  const rows = await sql<{ id: string; user_id: string; body: string; image_path: string | null; status: PostStatus }[]>`
+    SELECT id, user_id, body, image_path, status FROM community_posts WHERE id = ${postId}`;
   if (rows.length === 0) throw notFound(Messages.POST_NOT_FOUND);
   return rows[0];
+}
+
+/** Post publicado (curtir/comentar): pendente conta como inexistente. */
+async function requireApproved(sql: Db, postId: string) {
+  const post = await requirePost(sql, postId);
+  if (post.status !== 'APPROVED') throw notFound(Messages.POST_NOT_FOUND);
+  return post;
+}
+
+/** Pendente só aparece para o autor e para admins. */
+function canSee(p: { status: PostStatus; user_id: string }, user: AuthUser): boolean {
+  return p.status === 'APPROVED' || p.user_id === user.id || isAdmin(user);
 }
 
 /** Top 6 hashtags (minúsculas, sem "#"), contando cada tag uma vez por post. */
@@ -383,12 +400,13 @@ export function registerCommunity(app: App) {
     const sql = db();
     const catCond = category != null ? sql`AND p.category = ${category}` : sql``;
     const [{ n }] = await sql<{ n: number }[]>`
-      SELECT count(*) AS n FROM community_posts p WHERE p.created_at > ${since} AND p.user_id <> ${user.id} ${catCond}`;
+      SELECT count(*) AS n FROM community_posts p
+      WHERE p.status = 'APPROVED' AND p.created_at > ${since} AND p.user_id <> ${user.id} ${catCond}`;
     if (n === 0) return c.json({ count: 0, authors: [] });
     const rows = await sql<(AuthorCols & { user_id: string })[]>`
       SELECT p.user_id, u.id AS a_id, u.email AS a_email, u.full_name AS a_full_name, u.avatar_path AS a_avatar_path
       FROM community_posts p LEFT JOIN users u ON u.id = p.user_id
-      WHERE p.created_at > ${since} AND p.user_id <> ${user.id} ${catCond}
+      WHERE p.status = 'APPROVED' AND p.created_at > ${since} AND p.user_id <> ${user.id} ${catCond}
       ORDER BY p.created_at DESC
       LIMIT 20`;
     const seen = new Set<string>();
@@ -406,6 +424,7 @@ export function registerCommunity(app: App) {
     const user = me(c);
     const sql = db();
     const post = await findPost(sql, user.id, id);
+    if (!canSee(post, user)) throw notFound(Messages.POST_NOT_FOUND);
     return c.json((await toDtos(sql, [post], user))[0]);
   });
 
@@ -450,18 +469,23 @@ export function registerCommunity(app: App) {
         }
       }
       const id = newId();
-      await tx`
-        INSERT INTO community_posts (id, user_id, category, body, image_path, image_width, image_height, created_at)
-        VALUES (${id}, ${user.id}, ${category}, ${body}, ${imagePath}, ${w}, ${h}, ${current})`;
       const [u] = await tx<{ id: string; email: string; full_name: string | null; avatar_path: string | null; role: string }[]>`
         SELECT id, email, full_name, avatar_path, role FROM users WHERE id = ${user.id}`;
-      if (u.role === 'ADMIN') {
+      // Post de membro passa pela aprovação de um admin; o do admin sai publicado.
+      const status: PostStatus = u.role === 'ADMIN' ? 'APPROVED' : 'PENDING';
+      await tx`
+        INSERT INTO community_posts (id, user_id, category, body, image_path, image_width, image_height, created_at, status)
+        VALUES (${id}, ${user.id}, ${category}, ${body}, ${imagePath}, ${w}, ${h}, ${current}, ${status})`;
+      if (status === 'PENDING') {
+        await notifyAdmins(tx, user.id, `${displayName(u)} publicou na comunidade e aguarda aprovação`,
+          excerpt(body, 140) ?? 'Publicação com imagem.', `${LINK}?pendentes=1`);
+      } else {
         const ex = excerpt(body, 140);
         await notifyCommunity(tx, user.id, 'Nova publicação da equipe LURE',
           ex ?? 'Uma nova imagem foi compartilhada na comunidade.', linkTo(id));
       }
       const row: PostRow = {
-        id, user_id: user.id, category, body, image_path: imagePath, image_width: w, image_height: h,
+        id, user_id: user.id, status, category, body, image_path: imagePath, image_width: w, image_height: h,
         created_at: current, likes_count: 0, comments_count: 0, liked: false,
         a_id: u.id, a_email: u.email, a_full_name: u.full_name, a_avatar_path: u.avatar_path,
       };
@@ -488,7 +512,7 @@ export function registerCommunity(app: App) {
     const postId = uuidParam(c, 'id');
     const user = me(c);
     const result = await withUserLock(user.id, async (tx) => {
-      const post = await requirePost(tx, postId);
+      const post = await requireApproved(tx, postId);
       const exists = await tx`SELECT 1 FROM post_likes WHERE post_id = ${postId} AND user_id = ${user.id}`;
       if (exists.length === 0) {
         await tx`
@@ -525,6 +549,7 @@ export function registerCommunity(app: App) {
     const user = me(c);
     const sql = db();
     const post = await requirePost(sql, postId);
+    if (!canSee(post, user)) throw notFound(Messages.POST_NOT_FOUND);
     const rows = await sql<CommentRow[]>`
       SELECT c.id, c.post_id, c.user_id, c.body, c.created_at,
              u.id AS a_id, u.email AS a_email, u.full_name AS a_full_name, u.avatar_path AS a_avatar_path
@@ -542,7 +567,7 @@ export function registerCommunity(app: App) {
     new Check().notBlank('body', rawBody, 'Escreva um comentário.').done();
 
     const dto = await transaction(async (tx) => {
-      const post = await requirePost(tx, postId);
+      const post = await requireApproved(tx, postId);
       const body = rawBody == null ? '' : strip(rawBody);
       if (body === '') throw badRequest('Escreva um comentário.');
       if (body.length > MAX_COMMENT) throw badRequest('O comentário pode ter no máximo 300 caracteres.');
@@ -593,14 +618,14 @@ export function registerCommunity(app: App) {
       sql<{ members: number; posts_today: number; posts_total: number; mine: number }[]>`
         SELECT
           (SELECT count(*) FROM users WHERE active = true) AS members,
-          (SELECT count(*) FROM community_posts WHERE created_at >=
+          (SELECT count(*) FROM community_posts WHERE status = 'APPROVED' AND created_at >=
               (date_trunc('day', now() AT TIME ZONE 'America/Sao_Paulo') AT TIME ZONE 'America/Sao_Paulo')) AS posts_today,
-          (SELECT count(*) FROM community_posts) AS posts_total,
+          (SELECT count(*) FROM community_posts WHERE status = 'APPROVED') AS posts_total,
           (SELECT count(*) FROM community_posts WHERE user_id = ${user.id} AND created_at > ${since24h}) AS mine`,
-      sql<{ body: string }[]>`SELECT body FROM community_posts WHERE created_at >= ${since30d}`,
+      sql<{ body: string }[]>`SELECT body FROM community_posts WHERE status = 'APPROVED' AND created_at >= ${since30d}`,
       // Quem mais movimentou (post vale 2, comentário vale 1); só contas ativas.
       sql<{ id: string; email: string; full_name: string | null; avatar_path: string | null; posts: number; comments: number }[]>`
-        WITH p AS (SELECT user_id, count(*) AS n FROM community_posts WHERE created_at >= ${since7d} GROUP BY user_id),
+        WITH p AS (SELECT user_id, count(*) AS n FROM community_posts WHERE status = 'APPROVED' AND created_at >= ${since7d} GROUP BY user_id),
              c AS (SELECT user_id, count(*) AS n FROM post_comments WHERE created_at >= ${since7d} GROUP BY user_id)
         SELECT u.id, u.email, u.full_name, u.avatar_path, COALESCE(p.n, 0) AS posts, COALESCE(c.n, 0) AS comments
         FROM users u LEFT JOIN p ON p.user_id = u.id LEFT JOIN c ON c.user_id = u.id
@@ -623,5 +648,48 @@ export function registerCommunity(app: App) {
       tags: topTags(bodies.map((b) => b.body)),
       topVoices,
     });
+  });
+
+  // ---------------------------------------------------------------- moderação (só admin: /api/admin/**)
+
+  /** Publicações de membros aguardando aprovação, das mais antigas para as mais novas. */
+  app.get('/api/admin/community/pending', async (c) => {
+    const user = me(c);
+    const sql = db();
+    const rows = await sql<PostRow[]>`
+      ${postSelect(sql, user.id)}
+      WHERE p.status = 'PENDING'
+      ORDER BY p.created_at ASC, p.id ASC
+      LIMIT 100`;
+    return c.json(await toDtos(sql, rows, user));
+  });
+
+  /** Aprova: o post entra no feed como novo (data de agora) e o autor é avisado. */
+  app.post('/api/admin/community/posts/:id/approve', async (c) => {
+    const id = uuidParam(c, 'id');
+    const user = me(c);
+    const dto = await transaction(async (tx) => {
+      const post = await requirePost(tx, id);
+      if (post.status !== 'PENDING') throw conflict('Esta publicação já foi aprovada.');
+      await tx`UPDATE community_posts SET status = 'APPROVED', created_at = ${now()} WHERE id = ${id}`;
+      await notifyUser(tx, post.user_id, 'SYSTEM', 'Sua publicação foi aprovada e já está na comunidade',
+        excerpt(post.body, 120), linkTo(id));
+      return (await toDtos(tx, [await findPost(tx, user.id, id)], user))[0];
+    });
+    return c.json(dto);
+  });
+
+  /** Recusa: apaga o post (e a imagem) e avisa o autor. */
+  app.post('/api/admin/community/posts/:id/reject', async (c) => {
+    const id = uuidParam(c, 'id');
+    await transaction(async (tx) => {
+      const post = await requirePost(tx, id);
+      if (post.status !== 'PENDING') throw conflict('Esta publicação já foi aprovada.');
+      await deleteFile(tx, post.image_path);
+      await tx`DELETE FROM community_posts WHERE id = ${id}`;
+      await notifyUser(tx, post.user_id, 'SYSTEM', 'Sua publicação não foi aprovada pela equipe LURE',
+        excerpt(post.body, 120), LINK);
+    });
+    return noContent(c);
   });
 }

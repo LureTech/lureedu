@@ -56,6 +56,13 @@ import { CATEGORY_STYLE, PostTextComponent } from './post-text.component';
             }
           </header>
 
+          @if (post().status === 'PENDING') {
+            <span
+              class="mt-1 inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-400"
+            >
+              <app-icon name="clock" class="h-3 w-3" /> Aguardando aprovação da equipe
+            </span>
+          }
           @if (post().body) {
             <app-post-text
               class="mt-0.5 text-[15px] leading-[1.45] text-foreground/95"
@@ -78,12 +85,16 @@ import { CATEGORY_STYLE, PostTextComponent } from './post-text.component';
             </div>
           }
 
-          <app-post-actions
-            class="mt-1 block"
-            [post]="post()"
-            (comment)="comment.emit(post())"
-            (like)="like.emit(post())"
-          />
+          @if (post().status !== 'PENDING') {
+            <app-post-actions
+              class="mt-1 block"
+              [post]="post()"
+              (comment)="comment.emit(post())"
+              (like)="like.emit(post())"
+            />
+          } @else {
+            <div class="h-3"></div>
+          }
         </div>
       </div>
 
