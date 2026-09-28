@@ -101,11 +101,20 @@ import { IconComponent } from './icon.component';
         </div>
       }
 
+      @if (m().coverUrl) {
+        <!-- Capa é foto (não arte com o nome): degradê para o título ficar legível -->
+        <div class="pointer-events-none absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black via-black/70 to-transparent"></div>
+      }
       <div class="relative flex flex-1 flex-col p-6">
         @if (!m().coverUrl) {
           <h3 class="font-display text-xl font-bold leading-snug">{{ m().title }}</h3>
+        } @else {
+          <h3 class="mt-auto font-display text-xl font-bold uppercase leading-tight text-white">{{ m().title }}</h3>
         }
-        <div class="mt-auto flex items-center justify-between gap-3 pt-4 text-xs text-muted-foreground">
+        <div
+          class="flex items-center justify-between gap-3 pt-3 text-xs"
+          [class]="m().coverUrl ? 'text-white/75' : 'mt-auto pt-4 text-muted-foreground'"
+        >
           <span class="truncate">{{ m().author || 'Time LURE' }}</span>
           <span class="flex shrink-0 items-center gap-1">
             <app-icon name="play" class="h-3 w-3" />

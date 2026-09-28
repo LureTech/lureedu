@@ -79,9 +79,7 @@ import { IconComponent } from './icon.component';
         }
       </div>
       <div class="flex flex-1 flex-col px-3 pb-3 pt-2.5">
-        @if (!m().coverUrl) {
-          <h3 class="line-clamp-2 text-[15px] font-medium leading-snug text-foreground">{{ m().title }}</h3>
-        }
+        <h3 class="line-clamp-2 text-[15px] font-medium leading-snug text-foreground">{{ m().title }}</h3>
         <div class="mt-auto flex items-center gap-2.5 pt-2">
           <span class="shrink-0 text-[12px] tabular-nums text-muted-foreground">{{ progress() }}%</span>
           <span class="h-1 flex-1 overflow-hidden rounded-full bg-white/10">

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, input, signal, untracked, viewChild } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 import { CatalogApi } from '../../core/api/catalog.api';
@@ -66,15 +66,38 @@ import { ModuleCardComponent } from '../../shared/module-card.component';
             Nenhum módulo nesta seção por enquanto.
           </div>
         } @else {
-          <div class="mt-8 grid grid-cols-2 gap-3.5 lg:hidden">
+          <!-- Carrossel: arrasta no celular, setas no computador -->
+          <div class="no-scrollbar -mx-4 mt-8 flex snap-x snap-mandatory gap-3.5 overflow-x-auto overscroll-x-contain px-4 pb-3 pt-2 lg:hidden">
             @for (m of d.modules; track m.id; let i = $index) {
-              <app-module-card-mobile [m]="m" [isAdmin]="auth.isAdmin()" [index]="i" (lockToggle)="toggleLock($event)" />
+              <div class="w-[46%] shrink-0 snap-start sm:w-[31%]">
+                <app-module-card-mobile [m]="m" [isAdmin]="auth.isAdmin()" [index]="i" (lockToggle)="toggleLock($event)" />
+              </div>
             }
           </div>
-          <div class="mt-8 hidden gap-5 lg:grid lg:grid-cols-3 xl:grid-cols-4">
-            @for (m of d.modules; track m.id) {
-              <app-module-card [m]="m" [isAdmin]="auth.isAdmin()" (lockToggle)="toggleLock($event)" />
-            }
+          <div class="relative mt-8 hidden lg:block">
+            <button
+              type="button"
+              aria-label="Módulo anterior"
+              (click)="scroll(-1)"
+              class="absolute -left-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-border/70 bg-background/90 text-foreground shadow-lg backdrop-blur transition hover:border-primary/50 hover:text-primary"
+            >
+              <app-icon name="chevron-left" class="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              aria-label="Próximo módulo"
+              (click)="scroll(1)"
+              class="absolute -right-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-border/70 bg-background/90 text-foreground shadow-lg backdrop-blur transition hover:border-primary/50 hover:text-primary"
+            >
+              <app-icon name="chevron-right" class="h-5 w-5" />
+            </button>
+            <div #track class="no-scrollbar flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain pb-3 pt-2">
+              @for (m of d.modules; track m.id) {
+                <div data-card class="w-[calc(33.333%-0.834rem)] shrink-0 snap-start xl:w-[calc(25%-0.9375rem)]">
+                  <app-module-card [m]="m" [isAdmin]="auth.isAdmin()" (lockToggle)="toggleLock($event)" />
+                </div>
+              }
+            </div>
           </div>
         }
       }
@@ -117,6 +140,16 @@ export class SectionPage {
         this.loading.set(false);
       },
     });
+  }
+
+  private readonly track = viewChild<ElementRef<HTMLElement>>('track');
+
+  /** Setas do carrossel: anda um módulo por clique. */
+  protected scroll(dir: number): void {
+    const el = this.track()?.nativeElement;
+    if (!el) return;
+    const card = el.querySelector<HTMLElement>('[data-card]');
+    el.scrollBy({ left: dir * (card ? card.offsetWidth + 20 : el.clientWidth * 0.8), behavior: 'smooth' });
   }
 
   protected toggleLock(m: ModuleCardDto): void {
