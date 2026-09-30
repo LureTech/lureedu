@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { UiService, WHATSAPP_SUPPORT } from '../core/ui.service';
+import { UiService } from '../core/ui.service';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
 
@@ -8,7 +8,7 @@ const BENEFITS: { icon: string; title: string; text: string }[] = [
   { icon: 'video', title: 'Mentorias ao vivo', text: 'Encontros com o time LURE para destravar os seus próximos passos.' },
   { icon: 'users', title: 'Comunidade exclusiva', text: 'Troque conquistas, dúvidas e cases com quem está no mesmo jogo.' },
   { icon: 'award', title: 'Certificados verificáveis', text: 'Cada módulo concluído gera um certificado com código de verificação.' },
-  { icon: 'life-buoy', title: 'Suporte direto', text: 'Fale com a equipe pelo WhatsApp sempre que precisar.' },
+  { icon: 'life-buoy', title: 'Head do seu projeto', text: 'Um contato direto na Lure para tirar dúvidas e orientar os próximos passos.' },
 ];
 
 /** Modal "Plano Premium → Ver benefícios" (no original o botão não fazia nada). */
@@ -64,14 +64,13 @@ const BENEFITS: { icon: string; title: string; text: string }[] = [
           >
             Fechar
           </button>
-          <a
-            [href]="support"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            (click)="ui.openSupport()"
             class="inline-flex items-center justify-center gap-2 rounded-xl gradient-gold px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:brightness-110"
           >
-            <app-icon name="message-circle" class="h-4 w-4" /> Falar com o suporte
-          </a>
+            <app-icon name="message-circle" class="h-4 w-4" /> Precisa de ajuda?
+          </button>
         </div>
       </app-modal>
     }
@@ -80,5 +79,4 @@ const BENEFITS: { icon: string; title: string; text: string }[] = [
 export class BenefitsModalComponent {
   protected readonly ui = inject(UiService);
   protected readonly benefits = BENEFITS;
-  protected readonly support = WHATSAPP_SUPPORT;
 }

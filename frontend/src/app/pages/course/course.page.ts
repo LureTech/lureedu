@@ -18,7 +18,7 @@ import { AuthService } from '../../core/auth.service';
 import { LessonDto, ModuleDetailDto, ProgressUpdateDto, QuizResultDto } from '../../core/models';
 import { ProgressStore } from '../../core/progress.store';
 import { ToastService } from '../../core/toast.service';
-import { UiService, WHATSAPP_LESSON_HELP } from '../../core/ui.service';
+import { UiService } from '../../core/ui.service';
 import { AvatarComponent } from '../../shared/avatar.component';
 import { downloadCertificate } from '../../shared/certificate-canvas';
 import { formatBytes, formatDuration } from '../../shared/format';
@@ -558,21 +558,20 @@ const ALL_PARAM = 'todas';
                   (openQuiz)="openQuiz()"
                 />
                 <div class="shrink-0 border-t border-border p-4">
-                  <a
-                    [href]="helpLink"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="flex items-center gap-3 rounded-xl border border-border bg-background/60 p-3 transition hover:border-primary/40"
+                  <button
+                    type="button"
+                    (click)="ui.openSupport()"
+                    class="flex w-full items-center gap-3 rounded-xl border border-border bg-background/60 p-3 text-left transition hover:border-primary/40"
                   >
                     <div class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/15 text-primary">
                       <app-icon name="life-buoy" class="h-4 w-4" />
                     </div>
                     <div class="min-w-0">
-                      <div class="text-sm font-semibold">Precisa de ajuda?</div>
-                      <div class="text-xs text-muted-foreground">Fale com o suporte LURE</div>
+                      <div class="text-sm font-semibold">Dúvidas sobre a aula?</div>
+                      <div class="text-xs text-muted-foreground">Fale com o Head do seu projeto</div>
                     </div>
                     <app-icon name="arrow-right" class="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
-                  </a>
+                  </button>
                 </div>
               </aside>
             </div>
@@ -618,7 +617,6 @@ export class CoursePage {
   private readonly progressStore = inject(ProgressStore);
   private readonly title = inject(Title);
 
-  protected readonly helpLink = WHATSAPP_LESSON_HELP;
   protected readonly state = signal<PageState>('loading');
   protected readonly errorMsg = signal('');
   protected readonly module = signal<ModuleDetailDto | null>(null);

@@ -15,7 +15,7 @@ import {
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { formatClock } from './format';
 import { IconComponent } from './icon.component';
-import { driveId, isDirectVideo, youtubeId } from './youtube';
+import { driveId, isDirectVideo, videoThumb, youtubeId } from './youtube';
 import { YTEvent, YTPlayer, loadYouTubeApi } from './youtube-api';
 
 
@@ -64,13 +64,29 @@ function html5Player(v: HTMLVideoElement): YTPlayer {
   template: `
     @if (driveSrc(); as src) {
       <!-- Google Drive não tem API de controle: usa o player dele (sem progresso automático; o aluno marca a aula como concluída). -->
-      <iframe
-        [src]="src"
-        class="h-full w-full border-0 bg-black"
-        allow="autoplay; fullscreen"
-        allowfullscreen
-        title="Vídeo da aula"
-      ></iframe>
+      <div class="relative h-full w-full bg-black">
+        <iframe
+          [src]="src"
+          class="h-full w-full border-0 bg-black"
+          allow="autoplay; fullscreen"
+          allowfullscreen
+          fetchpriority="high"
+          title="Vídeo da aula"
+          (load)="driveReady.set(true)"
+        ></iframe>
+        @if (!driveReady()) {
+          <!-- Capa da aula na hora, enquanto o player do Drive carrega (em vez de tela preta) -->
+          <div class="pointer-events-none absolute inset-0 grid place-items-center">
+            @if (driveThumb(); as t) {
+              <img [src]="t" alt="" class="absolute inset-0 h-full w-full object-cover" fetchpriority="high" />
+            }
+            <div class="absolute inset-0 bg-black/45"></div>
+            <span class="relative grid h-16 w-16 place-items-center rounded-full bg-black/70">
+              <app-icon name="loader-circle" class="h-7 w-7 animate-spin text-primary" />
+            </span>
+          </div>
+        }
+      </div>
     } @else if (!videoId() && !directSrc()) {
       <div class="grid h-full w-full place-items-center bg-black text-sm text-white/60">Vídeo indisponível.</div>
     } @else if (failed()) {
@@ -261,6 +277,9 @@ export class LurePlayerComponent {
   protected readonly videoId = computed(() => youtubeId(this.videoUrl()));
   protected readonly directSrc = computed(() => (isDirectVideo(this.videoUrl()) ? this.videoUrl().trim() : null));
   private readonly sanitizer = inject(DomSanitizer);
+  /** O iframe do Drive terminou de carregar (até lá, mostra a capa com o carregando). */
+  protected readonly driveReady = signal(false);
+  protected readonly driveThumb = computed(() => videoThumb(this.videoUrl(), 1280));
   /** Player do Google Drive (iframe /preview); o ID só tem [A-Za-z0-9_-], então a URL é segura. */
   protected readonly driveSrc = computed((): SafeResourceUrl | null => {
     const id = driveId(this.videoUrl());

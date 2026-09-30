@@ -7,6 +7,7 @@ import { NotificationsStore } from '../core/notifications.store';
 import { ProgressStore } from '../core/progress.store';
 import { UiService } from '../core/ui.service';
 import { BenefitsModalComponent } from './benefits-modal.component';
+import { SupportModalComponent } from './support-modal.component';
 import { MobileDrawerComponent, MobileTabbarComponent, MobileTopbarComponent } from './mobile-bars.component';
 import { ProfileModalComponent } from './profile-modal.component';
 import { SidebarComponent } from './sidebar.component';
@@ -37,6 +38,7 @@ function hasBare(root: ActivatedRouteSnapshot | null): boolean {
     MobileTabbarComponent,
     ProfileModalComponent,
     BenefitsModalComponent,
+    SupportModalComponent,
   ],
   template: `
     <div class="min-h-screen bg-background text-foreground">
@@ -68,6 +70,7 @@ function hasBare(root: ActivatedRouteSnapshot | null): boolean {
       <app-profile-modal />
     }
     <app-benefits-modal />
+    <app-support-modal />
   `,
 })
 export class ShellComponent {

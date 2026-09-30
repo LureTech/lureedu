@@ -105,7 +105,7 @@ const ICON_ANIM: Record<string, string> = {
                     <ng-container [ngTemplateOutlet]="content" [ngTemplateOutletContext]="{ $implicit: item, active }" />
                   </a>
                 } @else {
-                  <button type="button" (click)="close(); ui.openProfile()" [class]="cls">
+                  <button type="button" (click)="close(); item.action === 'support' ? ui.openSupport() : ui.openProfile()" [class]="cls">
                     <ng-container [ngTemplateOutlet]="content" [ngTemplateOutletContext]="{ $implicit: item, active }" />
                   </button>
                 }

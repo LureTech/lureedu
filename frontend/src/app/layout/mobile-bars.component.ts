@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
-import { UiService, WHATSAPP_SUPPORT } from '../core/ui.service';
+import { UiService } from '../core/ui.service';
 import { AvatarComponent } from '../shared/avatar.component';
 import { IconComponent } from '../shared/icon.component';
 import { ModalComponent } from '../shared/modal.component';
@@ -155,15 +155,13 @@ export class MobileTopbarComponent {
         </nav>
         <div class="mx-3 my-4 h-px bg-border/50"></div>
         <div class="flex flex-col gap-1 px-3">
-          <a
-            [href]="support"
-            target="_blank"
-            rel="noopener noreferrer"
-            (click)="close()"
-            class="flex items-center gap-3 rounded-xl px-3 py-3 text-[15px] font-medium text-foreground/90 transition active:bg-muted/60"
+          <button
+            type="button"
+            (click)="ui.openSupport()"
+            class="flex items-center gap-3 rounded-xl px-3 py-3 text-left text-[15px] font-medium text-foreground/90 transition active:bg-muted/60"
           >
             <app-icon name="ph-headset" class="h-5 w-5 text-muted-foreground" /> Suporte
-          </a>
+          </button>
           <button
             type="button"
             (click)="ui.openProfile()"
@@ -206,7 +204,6 @@ export class MobileDrawerComponent {
   protected readonly auth = inject(AuthService);
   private readonly url = injectUrlState();
   protected readonly open = this.ui.drawerOpen;
-  protected readonly support = WHATSAPP_SUPPORT;
   protected readonly items: NavItem[] = [
     { key: 'home', label: 'Início', icon: 'ph-house-simple', to: '/' },
     { key: 'courses', label: 'Meus cursos', icon: 'ph-book-open-text', to: '/meus-cursos', query: { tab: 'andamento' } },

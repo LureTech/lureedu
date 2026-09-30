@@ -15,6 +15,8 @@ export const WHATSAPP_FORGOT =
 export class UiService {
   readonly profileOpen = signal(false);
   readonly benefitsOpen = signal(false);
+  /** Janela "Suporte": orienta a falar com o Head do projeto. */
+  readonly supportOpen = signal(false);
   readonly drawerOpen = signal(false);
   readonly mobileSearchOpen = signal(false);
   /** Certificado recém-emitido → modal de comemoração. */
@@ -23,6 +25,12 @@ export class UiService {
   openProfile(): void {
     this.drawerOpen.set(false);
     this.profileOpen.set(true);
+  }
+
+  openSupport(): void {
+    this.drawerOpen.set(false);
+    this.benefitsOpen.set(false);
+    this.supportOpen.set(true);
   }
 
   closeProfile(): void {
