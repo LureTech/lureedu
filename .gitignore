@@ -7,7 +7,7 @@ logs/
 # Senha do banco na nuvem (Supabase) usada pelo iniciar.cmd
 supabase.env
 # Arquivos soltos de trabalho (vídeo > 100 MB não cabe no GitHub)
-*.mp4
+/*.mp4
 /ChatGPT Image*.png
 /image.png
 /capa-boas-vindas-lure.jpg
