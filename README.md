@@ -12,12 +12,8 @@ Plataforma de cursos da Lure Digital: trilhas por seção, player de aulas, prog
 1. Dê dois cliques em **`iniciar.cmd`**.
 2. O navegador abre em **http://localhost:4200**.
 
-| Perfil | E-mail | Senha |
-|---|---|---|
-| Administrador | `admin@lure.com.br` | `Lure@2026` |
-| Aluno (demo) | `membro@lure.com.br` | `Membro@2026` |
-
-Troque a senha do administrador no primeiro acesso (clique no seu nome → Editar perfil → Senha).
+As contas de acesso (administrador e aluno de demonstração) não ficam neste arquivo: o
+repositório é público. Peça o e-mail e a senha a quem administra o sistema.
 
 Os servidores ficam rodando em segundo plano. Para desligar, dê dois cliques em **`parar.cmd`**.
 
