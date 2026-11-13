@@ -33,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 public abstract class IntegrationTestBase {
 
     protected static final String ADMIN_EMAIL = "admin@lure.com.br";
-    protected static final String ADMIN_PASSWORD = "Lure@2026";
+    protected static final String ADMIN_PASSWORD = "Senha-So-De-Teste-H2";
     protected static final String PASSWORD = "Senha@1234";
 
     @Autowired

@@ -131,7 +131,6 @@ if (-not ($apiOk -and $webOk)) {
 if (-not $NoBrowser) { Start-Process 'http://localhost:4200' }
 Write-Host ''
 Write-Host '  AssessoriaLure no ar: http://localhost:4200' -ForegroundColor Green
-Write-Host '  Admin:  admin@lure.com.br  /  Lure@2026   (troque a senha no Perfil)'
-Write-Host '  Aluno:  membro@lure.com.br /  Membro@2026'
+Write-Host '  Contas: admin em ADMIN_EMAIL / ADMIN_PASSWORD; aluno demo em DEMO_PASSWORD (se SEED_DEMO=true)'
 Write-Host ''
 Write-Host '  Os servidores continuam rodando em segundo plano. Para desligar: parar.cmd'

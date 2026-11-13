@@ -38,11 +38,11 @@ public record AppProperties(
 
     public record Admin(
             @DefaultValue("admin@lure.com.br") String email,
-            @DefaultValue("Lure@2026") String password
+            String password
     ) {
     }
 
-    public record Seed(@DefaultValue("false") boolean demo) {
+    public record Seed(@DefaultValue("false") boolean demo, String demoPassword) {
     }
 
     public record Mail(@DefaultValue("AssessoriaLure <nao-responda@lure.com.br>") String from) {

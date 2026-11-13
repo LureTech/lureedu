@@ -40,7 +40,6 @@ public class DataSeeder implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
     static final String DEMO_EMAIL = "membro@lure.com.br";
-    static final String DEMO_PASSWORD = "Membro@2026";
 
     private final UserRepository users;
     private final SectionRepository sections;
@@ -77,8 +76,12 @@ public class DataSeeder implements CommandLineRunner {
         if (users.count() > 0) {
             return;
         }
+        String password = props.admin().password();
+        if (password == null || password.isBlank()) {
+            throw new IllegalStateException("Banco sem usuários: defina ADMIN_PASSWORD para criar a conta admin inicial.");
+        }
         String email = PasswordRules.normalizeEmail(props.admin().email());
-        users.save(new User(email, passwordEncoder.encode(props.admin().password()), "Administrador LURE", Role.ADMIN));
+        users.save(new User(email, passwordEncoder.encode(password), "Administrador LURE", Role.ADMIN));
         log.warn("Conta admin inicial criada: {} — TROQUE A SENHA no primeiro acesso (Perfil → Senha).", email);
     }
 
@@ -97,9 +100,14 @@ public class DataSeeder implements CommandLineRunner {
         if (courses.count() > 0) {
             return;
         }
+        String demoPassword = props.seed().demoPassword();
         if (!users.existsByEmail(DEMO_EMAIL)) {
-            users.save(new User(DEMO_EMAIL, passwordEncoder.encode(DEMO_PASSWORD), "Membro Demo", Role.MEMBER));
-            log.info("Membro demo criado: {} / {}", DEMO_EMAIL, DEMO_PASSWORD);
+            if (demoPassword == null || demoPassword.isBlank()) {
+                log.warn("DEMO_PASSWORD não definida: membro demo não criado.");
+            } else {
+                users.save(new User(DEMO_EMAIL, passwordEncoder.encode(demoPassword), "Membro Demo", Role.MEMBER));
+                log.info("Membro demo criado: {}", DEMO_EMAIL);
+            }
         }
         UUID adminId = users.searchForAdmin("").stream().filter(User::isAdmin).map(User::getId).findFirst()
                 .orElse(null);
